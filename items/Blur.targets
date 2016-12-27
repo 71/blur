@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!-- Properties -->
+    <PropertyGroup>
+        <BlurTargetPath>@(IntermediateAssembly->'%(FullPath).temp')</BlurTargetPath>
+        <BlurFilename>Blur.exe</BlurFilename>
+    </PropertyGroup>
+    
+    <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+        <BlurPath>$(MSBuildThisFileDirectory)..\tools\$(BlurFilename)</BlurPath>
+        <BlurCommand>"$(BlurPath)"</BlurCommand>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+        <BlurPath>$(MSBuildThisFileDirectory)../tools/$(BlurFilename)</BlurPath>
+        <BlurCommand>mono "$(BlurPath)"</BlurCommand>
+    </PropertyGroup>
+
+    
+    <!-- Processing -->
+    <Target Name="BlurWeaving" AfterTargets="AfterCompile">
+        <Exec Command="$(BlurCommand) &quot;@(IntermediateAssembly)&quot; &quot;$(BlurTargetPath)&quot; &quot;@(ReferencePath)&quot;" />
+    </Target>
+
+    <Target Name="MoveFiles" DependsOnTargets="BlurWeaving"
+            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
+        
+        <Copy SourceFiles="$(BlurTargetPath)"
+              DestinationFiles="@(IntermediateAssembly)"
+              OverwriteReadOnlyFiles="True" ContinueOnError="False" />
+        <Message Text="Blur successfully ran." />
+    </Target>
+    
+</Project>

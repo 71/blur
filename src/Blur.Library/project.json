@@ -1,0 +1,10 @@
+{
+  "supports": {},
+  "dependencies": {
+    "Mono.Cecil": "0.10.0-beta1-v2",
+    "System.Reflection.Emit.Lightweight": "4.3.0"
+  },
+  "frameworks": {
+    ".NETPortable,Version=v4.5,Profile=Profile111": {}
+  }
+}
