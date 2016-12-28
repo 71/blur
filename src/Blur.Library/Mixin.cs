@@ -8,25 +8,16 @@ namespace Blur
     /// compilation.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class MixinAttribute : Attribute
+    public sealed class MixinAttribute : Attribute, IMethodWeaver
     {
-    }
+        private static readonly TypeReference MixinType = typeof(MixinAttribute).GetReference();
 
-    /// <summary>
-    /// Makes sure that every <see langword="static"/> method
-    /// marked with the <see cref="MixinAttribute"/> are executed
-    /// during compilation.
-    /// </summary>
-    public sealed class MixinVisitor : BlurVisitor
-    {
-        private readonly TypeReference MixinType = typeof(MixinAttribute).GetReference();
-
-        public MixinVisitor() : base(ProcessingState.After)
-        {
-        }
-
-        /// <inheritdoc/>
-        protected override void Visit(MethodDefinition method)
+        /// <summary>
+        /// Makes sure that every <see langword="static"/> method
+        /// marked with the <see cref="MixinAttribute"/> are executed
+        /// during compilation.
+        /// </summary>
+        public void Apply(MethodDefinition method)
         {
             // Make sure we've got a valid method.
             if (!method.HasCustomAttributes)
@@ -37,7 +28,7 @@ namespace Blur
                 return;
             if (method.HasGenericParameters)
                 return;
-            
+
             // Find the Mixin attribute.
             foreach (CustomAttribute attribute in method.CustomAttributes)
             {
@@ -45,7 +36,7 @@ namespace Blur
                 {
                     // We've got a match! Call the method.
                     object[] parameters;
-                    
+
                     if (method.Parameters.Count == 0)
                         parameters = new object[0];
                     else if (method.Parameters.Count == 1 && method.Parameters[0].ParameterType.FullName == typeof(TypeDefinition).FullName)
@@ -54,10 +45,10 @@ namespace Blur
                         parameters = new object[] { method };
                     else
                         throw new Exception("Invalid mixin signature.");
-                    
+
                     try
                     {
-                        method.Invoke(null, parameters);
+                        method.InvokeDefinition(null, parameters);
                     }
                     catch
                     {

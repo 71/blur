@@ -51,7 +51,7 @@ namespace Blur
                 {
                     InMemory = true,
                     ReadWrite = true,
-                    AssemblyResolver = new AssemblyResolver()                                  
+                    AssemblyResolver = new AssemblyResolver()
                 });
                 TargetModuleDefinition = TargetDefinition.MainModule;
                 TargetModule = Target.Modules.First(x => x.Name == TargetModuleDefinition.Name);
@@ -78,7 +78,7 @@ namespace Blur
                     ExecuteVisitors(visitors, ProcessingState.Before);
 
                 // Execute the internal visitor.
-                InternalBlurVisitor internalVisitor = new InternalBlurVisitor();
+                AttributesVisitor internalVisitor = new AttributesVisitor();
                 ExecuteVisitors(new[] { internalVisitor }, ProcessingState.Before);
 
                 // Execute all visitors AFTER.
@@ -134,9 +134,9 @@ namespace Blur
                     continue;
                 if (type.IsGenericType)
                     throw new NotSupportedException($"A {nameof(BlurVisitor)} cannot be generic.");
-                if (type.Name == nameof(InternalBlurVisitor)
+                if (type.Name == nameof(AttributesVisitor)
                  || type.Name == nameof(BlurVisitor)
-                 || !allowedVisitors.Contains(type.Name))
+                 || (allowedVisitors != null && !allowedVisitors.Contains(type.Name)))
                     continue;
 
                 ConstructorInfo visitorCtor = type.DeclaredConstructors.FirstOrDefault();
@@ -155,8 +155,20 @@ namespace Blur
         {
             var targetTypes = TargetDefinition.MainModule.Types;
 
+            if (state == ProcessingState.Before)
+            {
+                for (int i = 0; i < visitors.Count; i++)
+                    visitors[i].Visit(TargetDefinition, ProcessingState.Before);
+            }
+
             for (int i = 0; i < targetTypes.Count; i++)
                 ExecuteVisitors(visitors, state, targetTypes[i]);
+
+            if (state == ProcessingState.After)
+            {
+                for (int i = 0; i < visitors.Count; i++)
+                    visitors[i].Visit(TargetDefinition, ProcessingState.After);
+            }
         }
 
         /// <summary>
@@ -200,6 +212,13 @@ namespace Blur
                 {
                     visitors[x].Visit(toVisit[i], state);
 
+                    if (toVisit.Count != count)
+                    {
+                        i += toVisit.Count - count;
+                        count = toVisit.Count;
+                        continue;
+                    }
+
                     if (toVisit[i].DeclaringType != null)
                         continue;
 
@@ -217,7 +236,7 @@ namespace Blur
         /// </summary>
         /// <remarks>
         /// We don't clean up custom attributes here, because it was
-        /// already done by the <see cref="InternalBlurVisitor"/>.
+        /// already done by the <see cref="AttributesVisitor"/>.
         /// </remarks>
         private static void CleanUp()
         {

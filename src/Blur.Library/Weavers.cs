@@ -1,14 +1,23 @@
-﻿using System.Reflection;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 
 namespace Blur
 {
     /// <summary>
-    /// Base interface for all weavers that
-    /// can modify an <see cref="Assembly"/>.
+    /// Base interface for all weavers.
     /// </summary>
     public interface IWeaver
     {
+    }
+
+    /// <summary>
+    /// Indicates that this <see cref="IWeaver"/> can weave assemblies.
+    /// </summary>
+    public interface IAssemblyWeaver : IWeaver
+    {
+        /// <summary>
+        /// Begin weaving an <see cref="AssemblyDefinition"/>.
+        /// </summary>
+        void Apply(AssemblyDefinition method);
     }
 
     /// <summary>
@@ -50,7 +59,7 @@ namespace Blur
     public interface IEventWeaver : IWeaver
     {
         /// <summary>
-        /// Begin weaving an <see cref="EventInfo"/>.
+        /// Begin weaving an <see cref="EventDefinition"/>.
         /// </summary>
         void Apply(EventDefinition @event);
     }
@@ -61,7 +70,7 @@ namespace Blur
     public interface IFieldWeaver : IWeaver
     {
         /// <summary>
-        /// Begin weaving a <see cref="FieldInfo"/>.
+        /// Begin weaving a <see cref="FieldDefinition"/>.
         /// </summary>
         void Apply(FieldDefinition field);
     }
@@ -99,12 +108,12 @@ namespace Blur
         /// Begin weaving a <see cref="GenericParameter"/>, given the
         /// <see cref="MethodDefinition"/> in which it is declared.
         /// </summary>
-        void Apply(GenericParameter parameter, MethodDefinition provider);
+        void Apply(GenericParameter parameter, MethodDefinition method);
 
         /// <summary>
         /// Begin weaving a <see cref="GenericParameter"/>, given the
         /// <see cref="TypeDefinition"/> in which it is declared.
         /// </summary>
-        void Apply(GenericParameter parameter, TypeDefinition provider);
+        void Apply(GenericParameter parameter, TypeDefinition type);
     }
 }

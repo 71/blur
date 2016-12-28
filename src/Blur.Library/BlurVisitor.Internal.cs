@@ -10,11 +10,11 @@ namespace Blur
     /// Represents the default <see cref="BlurVisitor"/>, that visits
     /// all members marked with a <see cref="IWeaver"/> <see cref="Attribute"/> in an assembly.
     /// </summary>
-    internal sealed class InternalBlurVisitor : BlurVisitor
+    internal sealed class AttributesVisitor : BlurVisitor
     {
         private static bool shouldCleanUp;
 
-        internal InternalBlurVisitor() : base(ProcessingState.Before)
+        internal AttributesVisitor() : base(ProcessingState.Before)
         {
             shouldCleanUp = Processor.Settings.CleanUp;
         }
@@ -46,13 +46,20 @@ namespace Blur
                 if (!IsWeaver<TWeaver>(attr.AttributeType))
                     continue;
 
-                callback(attr.Construct<TWeaver>());
+                callback(attr.CreateInstance<TWeaver>());
 
                 if (shouldCleanUp)
                     attributes.RemoveAt(i--);
             }
         }
-#endregion
+        #endregion
+
+        /// <inheritdoc/>
+        protected override void Visit(AssemblyDefinition assembly)
+        {
+            if (assembly.HasCustomAttributes)
+                Visit<IAssemblyWeaver>(assembly.CustomAttributes, weaver => weaver.Apply(assembly));
+        }
 
         /// <inheritdoc/>
         protected override void Visit(TypeDefinition type)
@@ -90,7 +97,7 @@ namespace Blur
         protected override void Visit(MethodDefinition method)
         {
             {
-                // Put this in its own scope to avoid creating putting returnType
+                // Put this in its own scope to avoid putting returnType
                 // in lambdas.
                 MethodReturnType returnType = method.MethodReturnType;
                 if (returnType.HasCustomAttributes)

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using Mono.Cecil;
+using System.Reflection;
 
 namespace Blur
 {
@@ -14,14 +14,14 @@ namespace Blur
     public enum ProcessingState
     {
         /// <summary>
-        /// Processing of the <see cref="Assembly"/> hasn't started yet.
+        /// Processing hasn't started yet.
         /// </summary>
-        Before,
+        Before = 1,
 
         /// <summary>
-        /// Processing of the <see cref="Assembly"/> has ended.
+        /// Processing has ended.
         /// </summary>
-        After,
+        After = 2,
 
         /// <summary>
         /// Accept both <see cref="Before"/> and <see cref="After"/>.
@@ -71,7 +71,7 @@ namespace Blur
         {
             this.CurrentState = state;
 
-            if (!this.RequiredState.HasFlag(state))
+            if ((this.RequiredState & state) != state)
                 return;
 
             try
@@ -93,6 +93,8 @@ namespace Blur
 
                     this.Visit(method);
                 }
+                else if (obj is AssemblyDefinition)
+                    this.Visit((AssemblyDefinition)obj);
             }
             catch (Exception e)
             {
@@ -101,6 +103,14 @@ namespace Blur
         }
 
         #region Protected methods Visit()
+        /// <summary>
+        /// Visit the given <paramref name="assembly"/>.
+        /// </summary>
+        protected virtual void Visit(AssemblyDefinition assembly)
+        {
+            // Do nothing.
+        }
+
         /// <summary>
         /// Visit the given <paramref name="type"/>.
         /// </summary>

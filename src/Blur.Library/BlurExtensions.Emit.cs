@@ -15,13 +15,29 @@ namespace Blur
 {
     partial class BlurExtensions
     {
+        private static readonly ConstructorInfo LabelCtor
+            = typeof(Label).GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 1);
+
+        private static Label CreateLabel(int label) => (Label)LabelCtor.Invoke(new object[] { label });
+
+        /// <summary>
+        /// Fix the offset of an <see cref="Instruction"/>.
+        /// </summary>
+        internal static int FixOffset(this Instruction ins)
+        {
+            Instruction prev = ins.Previous;
+            return ins.Offset = prev.Offset + prev.GetSize();
+        }
+
         /// <summary>
         /// Emits the given instruction to an <see cref="ILGenerator"/>.
         /// </summary>
         public static void Emit(this Instruction ins, ILGenerator il)
         {
+            string opname = ins.OpCode.Name == "tail" ? "Tailcall" : ins.OpCode.Name.Replace('.', '_');
+
             OpCode opcode = (OpCode)typeof(OpCodes).GetTypeInfo()
-                .GetDeclaredField(ins.OpCode.Name == "Tail" ? "Tailcall" : ins.OpCode.Name)
+                .DeclaredFields.First(x => x.Name.Equals(opname, StringComparison.OrdinalIgnoreCase))
                 .GetValue(null);
 
             object operand = ins.Operand;
@@ -29,24 +45,40 @@ namespace Blur
             if (operand == null)
                 il.Emit(opcode);
 
-            else if (operand.GetType().Namespace == nameof(Blur))
+            else if (operand.GetType().Namespace.StartsWith("Mono.Cecil"))
             {
-                if (operand is ParameterDefinition)
-                    il.Emit(OpCodes.Ldarga_S, (byte)((ParameterDefinition)operand).Sequence);
-                if (operand is TypeDefinition)
-                    il.Emit(opcode, ((TypeDefinition)operand).AsType());
-                if (operand is FieldDefinition)
-                    il.Emit(opcode, ((FieldDefinition)operand).AsInfo());
-
-                if (operand is MethodDefinition)
+                if (operand is ParameterReference)
+                    il.Emit(OpCodes.Ldarga_S, (byte)((ParameterReference)operand).Resolve().Sequence);
+                else if (operand is TypeReference)
+                    il.Emit(opcode, ((TypeReference)operand).AsType());
+                else if (operand is FieldReference)
+                    il.Emit(opcode, ((FieldReference)operand).Resolve().AsInfo());
+                else if (operand is MethodReference)
                 {
-                    MethodDefinition method = (MethodDefinition)operand;
+                    MethodDefinition method = ((MethodReference)operand).Resolve();
 
+                    // Old way: return method directly.
                     if (method.IsConstructor)
-                        il.Emit(opcode, (ConstructorInfo)method.AsInfo());
+                        il.Emit(opcode, (ConstructorInfo)method.GetMethod());
                     else
-                        il.Emit(opcode, (MethodInfo)method.AsInfo());
+                        il.Emit(opcode, (MethodInfo)method.GetMethod());
                 }
+                else if (operand is Instruction)
+                    il.Emit(opcode, ((Instruction)operand).FixOffset());
+                else if (operand is Instruction[])
+                    il.Emit(opcode, ((Instruction[])operand).Convert(x => CreateLabel(x.FixOffset())).ToArray());
+                else if (operand is VariableReference)
+                    il.Emit(opcode, ((VariableDefinition)operand).Index);
+                else if (operand is CallSite)
+                {
+                    CallSite callSite = (CallSite)operand;
+                    il.EmitCalli(opcode, (CallingConventions)(int)callSite.CallingConvention,
+                        callSite.ReturnType.AsType(),
+                        callSite.Parameters.Convert(x => x.ParameterType.AsType()), new Type[0]);
+                }
+                else
+                    // If we arrive here, somebody's been messing with Reflection...
+                    throw new NotSupportedException();
             }
 
             else if (operand is byte)
@@ -59,6 +91,8 @@ namespace Blur
             else if (operand is double)
                 il.Emit(opcode, (double)operand);
 
+            else if (operand is short)
+                il.Emit(opcode, (short)operand);
             else if (operand is int)
                 il.Emit(opcode, (int)operand);
             else if (operand is long)
@@ -67,13 +101,9 @@ namespace Blur
             else if (operand is string)
                 il.Emit(opcode, (string)operand);
 
-            else if (operand is Instruction)
-                il.Emit(opcode, ((Instruction)operand).Offset);
-            else if (operand is VariableDefinition)
-                il.Emit(opcode, ((VariableDefinition)operand).Index);
-
-            // If we arrive here, somebody's been messing with Reflection...
-            throw new NotSupportedException();
+            else
+                // If we arrive here, somebody's been messing with Reflection...
+                throw new NotSupportedException();
         }
     }
 }

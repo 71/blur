@@ -76,6 +76,7 @@ namespace Blur
                 this.instructions.Clear();
         }
 
+        #region To
         /// <summary>
         /// Go to the given <paramref name="position"/>,
         /// and return <see langword="this"/>.
@@ -101,6 +102,54 @@ namespace Blur
         /// and return <see langword="this"/>.
         /// </summary>
         public ILWriter ToStart() => this.To(0);
+        #endregion
+
+        #region Remove / Replace
+        /// <summary>
+        /// Removes the <see cref="Current"/> instruction,
+        /// and returns <see langword="this"/>.
+        /// </summary>
+        public ILWriter Remove()
+        {
+            instructions.RemoveAt(position);
+
+            if (position == instructions.Count)
+                position--;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes the given <paramref name="instruction"/>,
+        /// and returns <see langword="this"/>.
+        /// </summary>
+        public ILWriter Remove(Instruction instruction)
+        {
+            instructions.Remove(instruction);
+
+            if (position == instructions.Count)
+                position--;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes the given <paramref name="instruction"/>,
+        /// moves to its old position, and returns <see langword="this"/>.
+        /// </summary>
+        public ILWriter Replace(Instruction instruction)
+        {
+            int index = instructions.IndexOf(instruction);
+
+            if (index == -1)
+                throw new ArgumentException("The given instruction could not be found in the ILWriter.", nameof(instruction));
+
+            instructions.RemoveAt(index);
+            position = index;
+
+            return this;
+        } 
+        #endregion
 
         /// <summary>
         /// Copy the content of this <see cref="ILWriter"/> to

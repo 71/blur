@@ -17,11 +17,11 @@ namespace Blur.Processing
         {
             if (args.Length == 0 || args.Length > 3)
             {
-                Console.Error.WriteLine("Usage: blur.exe [target] [save] [references]");
-                Console.Error.WriteLine(" - target:     Path to the assembly to process.");
-                Console.Error.WriteLine(" - save:       Path to the file that'll be created.");
-                Console.Error.WriteLine(" - references: Semicolon-separated list containing");
-                Console.Error.WriteLine("               all the target's references.");
+                Console.WriteLine("Usage: blur.exe [target] [save] [references]");
+                Console.WriteLine(" - target:     Path to the assembly to process.");
+                Console.WriteLine(" - save:       Path to the file that'll be created.");
+                Console.WriteLine(" - references: Semicolon-separated list containing");
+                Console.WriteLine("               all the target's references.");
 
 #if DEBUG
                 Console.ReadLine();
@@ -42,10 +42,17 @@ namespace Blur.Processing
                 if (e is TargetInvocationException && e.InnerException != null)
                     e = e.InnerException;
 
-                Console.WriteLine("Error encountered whilst processing the given assembly:");
-                Console.WriteLine(e.Message);
-                Console.WriteLine();
-                Console.WriteLine(e.StackTrace);
+                Console.Error.WriteLine("Error encountered whilst processing the given assembly:");
+
+                while (e != null)
+                {
+                    Console.Error.WriteLine(e.Message);
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine(e.StackTrace);
+                    Console.Error.WriteLine();
+
+                    e = e.InnerException;
+                }
 
 #if DEBUG
                 Console.ReadLine();

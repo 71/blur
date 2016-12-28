@@ -39,9 +39,13 @@ namespace Blur
         /// Hint: use <see langword="nameof"/> to reference those visitors.
         /// </para>
         /// <para>
-        /// Default: <see cref="MixinVisitor"/>.
+        /// If this array is <see langword="null"/>, every visitor that can be
+        /// found will be used.
+        /// </para>
+        /// <para>
+        /// Default: <see langword="null"/>.
         /// </para>
         /// </summary>
-        public string[] Visitors { get; set; } = { nameof(MixinVisitor) };
+        public string[] Visitors { get; set; } = null;
     }
 }

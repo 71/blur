@@ -12,6 +12,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blur.Library", "src\Blur.Library\Blur.Library.csproj", "{613922AC-F779-4026-A605-EB7B51401000}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blur.Tests", "tests\Blur.Tests\Blur.Tests.csproj", "{016C358F-1272-4E99-9A91-DB469C723887}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4DFDF9B0-1E2E-4509-B2A8-D4824C63E7C8} = {4DFDF9B0-1E2E-4509-B2A8-D4824C63E7C8}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blur.Tests.Library", "tests\Blur.Tests.Library\Blur.Tests.Library.csproj", "{C26FE0E8-CDED-4503-BD9F-F290BBCD8BD6}"
 EndProject
@@ -19,9 +22,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "items", "items", "{F4AF9538
 	ProjectSection(SolutionItems) = preProject
 		items\Blur.nuspec = items\Blur.nuspec
 		items\Blur.targets = items\Blur.targets
-		items\Pack.ps1 = items\Pack.ps1
 		global.json = global.json
 		LICENSE = LICENSE
+		items\Pack.ps1 = items\Pack.ps1
 		README.md = README.md
 	EndProjectSection
 EndProject

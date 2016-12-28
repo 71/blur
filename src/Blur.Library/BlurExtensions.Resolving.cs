@@ -21,8 +21,12 @@ namespace Blur
         /// </summary>
         public static Type AsType(this TypeReference type)
         {
-            if (type.IsNew())
-                throw new ArgumentException("The given type cannot be dynamically created.", nameof(type));
+            //if (type.IsNew())
+            //    throw new ArgumentException("The given type cannot be dynamically created.", nameof(type));
+
+            // Check if type is nested.
+            if (type.DeclaringType != null)
+                return type.AsTypeInfo().AsType();
 
             // Simple try
             Type result = Type.GetType(type.FullName);
@@ -46,7 +50,13 @@ namespace Blur
         /// Load the <see cref="TypeInfo"/> associated with the given
         /// <see cref="TypeDefinition"/>.
         /// </summary>
-        public static TypeInfo AsTypeInfo(this TypeReference type) => type.AsType()?.GetTypeInfo();
+        public static TypeInfo AsTypeInfo(this TypeReference type)
+        {
+            if (type.DeclaringType != null)
+                return type.DeclaringType.Resolve().AsTypeInfo().GetDeclaredNestedType(type.Name);
+
+            return type.AsType()?.GetTypeInfo();
+        }
 
         /// <summary>
         /// Load the <see cref="MethodInfo"/> associated with the given
@@ -56,12 +66,25 @@ namespace Blur
         {
             var parameters = method.Parameters;
 
+            if (method.IsConstructor)
+            {
+                bool isStatic = method.IsStatic;
+
+                return (from mi in method.DeclaringType.AsTypeInfo().DeclaredConstructors
+                        where mi.IsStatic == isStatic
+                        let miParameters = mi.GetParameters()
+                        where miParameters.Length == parameters.Count
+                           && miParameters.Select(x => x.ParameterType.FullName)
+                                          .SequenceEqual(parameters.Select(x => x.ParameterType.FullName))
+                        select mi).FirstOrDefault();
+            }
+
             return (from mi in method.DeclaringType.AsTypeInfo().DeclaredMethods
                     where mi.Name == method.Name
                     let   miParameters = mi.GetParameters()
                     where miParameters.Length == parameters.Count
-                       && miParameters.Select(x => x.ParameterType.FullName)
-                                      .SequenceEqual(parameters.Select(x => x.ParameterType.FullName))
+                       && miParameters.Select(x => x.ParameterType.Name)
+                                      .SequenceEqual(parameters.Select(x => x.ParameterType.Name))
                     select mi).FirstOrDefault();
         }
 
