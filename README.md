@@ -1,5 +1,5 @@
 # Blur
-Blur uses [Mono.Cecil](https://github.com/jbevain/cecil) to weave assemblies from the inside.  
+Blur uses [Mono.Cecil](https://github.com/jbevain/cecil) to weave assemblies from the inside.
 To make this easier, Blur provides fluent APIs for IL generation and `MethodDefinition` invocation.
 
 ## Five-minutes annotated guide
@@ -12,9 +12,9 @@ using Blur;
 // The only requirement when using Blur is to mark
 // the assembly with the BlurAttribute.
 // This attribute also exposes some useful settings.
-// Currently, the only setting available is:
+// Here, the CleanUp property is set to true:
 //  bool CleanUp { get; set; }
-// If true, all references to Mono.Cecil and Blur will
+// In this case, all references to Mono.Cecil and Blur will
 // be removed from the assembly, including all weavers
 // and visitors.
 [assembly: Blur(CleanUp = true)]
@@ -33,8 +33,8 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
     // There are other interfaces such as this one, for every element
     // that can be marked with an attribute, EXCEPT assemblies and modules.
 
-    private readonly static MethodInfo ReadLineMethod
-        = typeof(Console).GetMethod(nameof(Console.ReadLine));
+    private readonly static MethodReference ReadLineMethod
+        = typeof(Console).GetMethod(nameof(Console.ReadLine)).GetReference();
 
     /// <summary>
     /// Prepends <see cref="Console.ReadLine"/> before all
@@ -70,7 +70,7 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
                 //  call    string [mscorlib]System.Console::ReadLine()
                 //  pop
                 // Not that Call() automatically inserts this if the method is
-                // an instance method, and used Callvirt if needed.
+                // an instance method, and uses Callvirt if needed.
                 writer
                     .Before(ins)            // Position builder before the given instruction
                     .Call(ReadLineMethod)   //  call string [mscorlib]System.Console::ReadLine()
@@ -91,7 +91,7 @@ class Program
 
 ## How to install
 #### `Install-Package Blur -Pre`
-Currently compatible with:  
+Currently compatible with:
 - .NET Standard 1.3 and over.
 - .NET 4.5 PCL and over.
 
@@ -112,7 +112,7 @@ a declaration is about to or has been modified by Blur:
 - `void Visit(MethodDefinition method)`
 - ...
 
-Any imported class that inherits `BlurVisitor` will automatically be created and used when weaving an assembly.
+Any class that inherits `BlurVisitor` and is in `BlurAttribute.Visitors` will automatically be created and used when weaving an assembly.
 
 #### In-Assembly weaving
 - The entire assembly is available to you during compilation.
