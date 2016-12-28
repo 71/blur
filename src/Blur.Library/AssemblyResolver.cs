@@ -29,26 +29,25 @@ namespace Blur
 
             Stream targetStream = Processor.GetAssemblyStream(fullName);
 
-            if (targetStream != null)
-            {
-                try
-                {
-                    assembly = AssemblyDefinition.ReadAssembly(targetStream, new ReaderParameters
-                    {
-                        InMemory = true,
-                        ReadWrite = false,
-                        ReadingMode = ReadingMode.Immediate
-                    });
+            if (targetStream == null)
+                return null;
 
-                    assembliesResolved.Add(fullName, assembly);
-                    return assembly;
-                }
-                catch
+            try
+            {
+                assembly = AssemblyDefinition.ReadAssembly(targetStream, new ReaderParameters
                 {
-                    return null;
-                }
+                    InMemory = true,
+                    ReadWrite = false,
+                    ReadingMode = ReadingMode.Immediate
+                });
+
+                this.assembliesResolved.Add(fullName, assembly);
+                return assembly;
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
         /// <inheritdoc/>

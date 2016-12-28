@@ -2,7 +2,7 @@
 <package xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
         <id>Blur</id>
-        <version>0.1.0-beta</version>
+        <version>0.1.1-beta</version>
         <title>Blur</title>
         <authors>Jee</authors>
         <owners>Jee</owners>
@@ -14,7 +14,7 @@
         <language>en-US</language>
         <copyright>Copyright (C) Grégoire GEIS 2016-2017</copyright>
         <tags>mono cecil il weaving weave assembly reflection injection blur</tags>
-        <releaseNotes>First release.</releaseNotes>
+        <releaseNotes>Many bug fixes.</releaseNotes>
         
         <dependencies>
             <dependency id="Mono.Cecil" version="0.10.0-beta1-v2" />

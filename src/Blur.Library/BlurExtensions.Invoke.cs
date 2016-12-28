@@ -21,6 +21,11 @@ namespace Blur
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
 
+            MethodBase matching = method.AsInfo();
+
+            if (matching != null)
+                return matching.Invoke(obj, parameters);
+
             DynamicMethod dynMethod;
 
             if (!dynamicMethods.TryGetValue(method.FullName, out dynMethod))

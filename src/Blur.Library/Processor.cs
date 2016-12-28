@@ -11,6 +11,7 @@ using System.Linq;
 
 namespace Blur
 {
+
     /// <summary>
     /// Defines the inner Blur processor. This class will
     /// edit an <see cref="Assembly"/> in which it is loaded.
@@ -63,11 +64,11 @@ namespace Blur
                     {
                         Assembly.Load(new AssemblyName(anRef.FullName));
                     }
-                    catch (Exception) { }
+                    catch (Exception)
+                    {
+                        // If it happens, it shouldn't matter much.
+                    }
                 }
-
-
-                TypeReference type = TargetModuleDefinition.GetType("Blur.Tests.Program");
 
                 // Find all visitors in this assembly, and referenced assemblies.
                 List<BlurVisitor> visitors = FindVisitors();
@@ -112,7 +113,7 @@ namespace Blur
             visitors.AddRange(FindVisitors(Target));
             
             // Search referenced assemblies.
-            foreach (Assembly assembly in GetAssemblies().Where(x => x.GetName().Name != "Blur.Library"))
+            foreach (Assembly assembly in GetAssemblies())
                 visitors.AddRange(FindVisitors(assembly));
 
             return visitors;
@@ -125,6 +126,7 @@ namespace Blur
         private static IEnumerable<BlurVisitor> FindVisitors(Assembly assembly)
         {
             TypeInfo visitorType = typeof(BlurVisitor).GetTypeInfo();
+            string[] allowedVisitors = Settings.Visitors;
 
             foreach (TypeInfo type in assembly.DefinedTypes)
             {
@@ -132,6 +134,10 @@ namespace Blur
                     continue;
                 if (type.IsGenericType)
                     throw new NotSupportedException($"A {nameof(BlurVisitor)} cannot be generic.");
+                if (type.Name == nameof(InternalBlurVisitor)
+                 || type.Name == nameof(BlurVisitor)
+                 || !allowedVisitors.Contains(type.Name))
+                    continue;
 
                 ConstructorInfo visitorCtor = type.DeclaredConstructors.FirstOrDefault();
 
@@ -160,24 +166,16 @@ namespace Blur
             TypeDefinition targetType)
         {
             // Fields
-            foreach (FieldDefinition field in targetType.Fields)
-                for (int x = 0; x < visitors.Count; x++)
-                    visitors[x].Visit(field, state);
+            ExecuteVisitors(visitors, state, targetType.Fields);
 
             // Events
-            foreach (EventDefinition ev in targetType.Events)
-                for (int x = 0; x < visitors.Count; x++)
-                    visitors[x].Visit(ev, state);
+            ExecuteVisitors(visitors, state, targetType.Events);
 
             // Properties
-            foreach (PropertyDefinition property in targetType.Properties)
-                for (int x = 0; x < visitors.Count; x++)
-                    visitors[x].Visit(property, state);
+            ExecuteVisitors(visitors, state, targetType.Properties);
 
             // Methods
-            foreach (MethodDefinition method in targetType.Methods)
-                for (int x = 0; x < visitors.Count; x++)
-                    visitors[x].Visit(method, state);
+            ExecuteVisitors(visitors, state, targetType.Methods);
 
             // Nested types
             foreach (TypeDefinition type in targetType.NestedTypes)
@@ -186,6 +184,32 @@ namespace Blur
             // Type
             for (int x = 0; x < visitors.Count; x++)
                 visitors[x].Visit(targetType, state);
+        }
+
+        /// <summary>
+        /// Execute the given visitors on a list of members.
+        /// </summary>
+        private static void ExecuteVisitors<T>(IReadOnlyList<BlurVisitor> visitors, ProcessingState state,
+            IList<T> toVisit) where T : IMemberDefinition
+        {
+            int count = toVisit.Count;
+
+            for (int i = 0; i < count; i++)
+            {
+                for (int x = 0; x < visitors.Count; x++)
+                {
+                    visitors[x].Visit(toVisit[i], state);
+
+                    if (toVisit[i].DeclaringType != null)
+                        continue;
+
+                    // The visitor removed this member...
+                    i--;
+                    goto EndMemberLoop;
+                }
+
+                EndMemberLoop: ;
+            }
         }
 
         /// <summary>

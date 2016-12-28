@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Blur.Tests.Library;
@@ -31,6 +32,8 @@ namespace Blur.Tests
 
     class Program
     {
+        static bool HasBeenModified = false;
+
         static int GetStringLength([NotNull] string str)
         {
             return str.Length;
@@ -42,11 +45,27 @@ namespace Blur.Tests
             return null;
         }
 
+        [Mixin]
+        static void Mixin(TypeDefinition type)
+        {
+            FieldDefinition hbmField = type.Fields.First(x => x.Name == nameof(HasBeenModified));
+            MethodDefinition cctor = type.Methods.First(x => x.Name == ".cctor");
+
+            cctor.Write().ForEach(ins =>
+            {
+                if (ins.OpCode == OpCodes.Stsfld && (ins.Operand as FieldDefinition).Name == nameof(HasBeenModified)
+                 && ins.Previous.OpCode == OpCodes.Ldc_I4_0)
+                    ins.Previous.OpCode = OpCodes.Ldc_I4_1;
+            });
+        }
+
         [BlockMethod]
         static void Main(string[] args)
         {
             Should.Throw<ArgumentNullException>(() => GetStringLength(null));
             Should.Throw<ArgumentNullException>(() => GetNull());
+
+            HasBeenModified.ShouldBe(true);
 
             Console.WriteLine("Tests were successful.");
         }

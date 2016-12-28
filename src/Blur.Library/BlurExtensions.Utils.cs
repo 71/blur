@@ -1,13 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Reflection;
 using Mono.Cecil;
 
 namespace Blur
 {
     partial class BlurExtensions
     {
+        #region IsMatch
+        /// <summary>
+        /// Returns whether or not <paramref name="self"/> inherits
+        /// <paramref name="typeDef"/>.
+        /// </summary>
+        public static bool Inherits(this TypeReference self, TypeReference typeDef)
+        {
+            return self.Resolve().IsMatch(x => x == typeDef);
+        }
+
         /// <summary>
         /// Returns whether or not <paramref name="self"/> inherits
         /// <paramref name="typeDef"/>.
@@ -27,7 +36,32 @@ namespace Blur
                 || (self.BaseType != null
                     && (predicate(self.BaseType) || self.BaseType.Resolve().IsMatch(predicate)));
         }
+        #endregion
 
+        #region Construct
+        /// <summary>
+        /// Creates an attribute of type <typeparamref name="T"/>, given
+        /// its <see cref="CustomAttribute"/> data.
+        /// </summary>
+        public static T Construct<T>(this CustomAttribute attribute)
+        {
+            TypeInfo type = attribute.AttributeType.AsTypeInfo();
+
+            T weaver = (T)Activator.CreateInstance(type.AsType(), attribute.ConstructorArguments.Convert(x => x.Value));
+
+            foreach (var field in attribute.Fields)
+                type.GetDeclaredField(field.Name)
+                    .SetValue(weaver, field.Argument.Value);
+
+            foreach (var property in attribute.Properties)
+                type.GetDeclaredProperty(property.Name)
+                    .SetValue(weaver, property.Argument.Value);
+
+            return weaver;
+        } 
+        #endregion
+
+        #region Convert
         /// <summary>
         /// Converts a list of type <typeparamref name="T"/> to
         /// an array of type <typeparamref name="U"/>.
@@ -55,5 +89,6 @@ namespace Blur
 
             return array;
         }
+        #endregion
     }
 }

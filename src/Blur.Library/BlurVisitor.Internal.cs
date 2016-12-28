@@ -31,27 +31,6 @@ namespace Blur
         }
 
         /// <summary>
-        /// Creates an attribute of type <typeparamref name="T"/>, given
-        /// its <see cref="CustomAttribute"/> data.
-        /// </summary>
-        private static T Create<T>(CustomAttribute data)
-        {
-            TypeInfo type = data.AttributeType.AsTypeInfo();
-
-            T weaver = (T)Activator.CreateInstance(type.AsType(), data.ConstructorArguments.Convert(x => x.Value));
-
-            foreach (var field in data.Fields)
-                type.GetDeclaredField(field.Name)
-                    .SetValue(weaver, field.Argument.Value);
-
-            foreach (var property in data.Properties)
-                type.GetDeclaredProperty(property.Name)
-                    .SetValue(weaver, property.Argument.Value);
-
-            return weaver;
-        }
-
-        /// <summary>
         /// Visits all the given <paramref name="attributes"/>.
         /// If an attribute is a <typeparamref name="TWeaver"/>, <paramref name="callback"/>
         /// will be called with it.
@@ -67,7 +46,7 @@ namespace Blur
                 if (!IsWeaver<TWeaver>(attr.AttributeType))
                     continue;
 
-                callback(Create<TWeaver>(attr));
+                callback(attr.Construct<TWeaver>());
 
                 if (shouldCleanUp)
                     attributes.RemoveAt(i--);

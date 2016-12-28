@@ -52,8 +52,6 @@ namespace Blur
         /// </summary>
         protected ProcessingState CurrentState { get; private set; }
 
-        internal Assembly Target;
-
         /// <summary>
         /// Create a new <see cref="BlurVisitor"/>.
         /// </summary>
@@ -76,22 +74,29 @@ namespace Blur
             if (!this.RequiredState.HasFlag(state))
                 return;
 
-            if (obj is TypeDefinition)
-                this.Visit((TypeDefinition)obj);
-            else if (obj is PropertyDefinition)
-                this.Visit((PropertyDefinition)obj);
-            else if (obj is FieldDefinition)
-                this.Visit((FieldDefinition)obj);
-            else if (obj is EventDefinition)
-                this.Visit((EventDefinition)obj);
-            else if (obj is MethodDefinition)
+            try
             {
-                MethodDefinition method = (MethodDefinition)obj;
+                if (obj is TypeDefinition)
+                    this.Visit((TypeDefinition)obj);
+                else if (obj is PropertyDefinition)
+                    this.Visit((PropertyDefinition)obj);
+                else if (obj is FieldDefinition)
+                    this.Visit((FieldDefinition)obj);
+                else if (obj is EventDefinition)
+                    this.Visit((EventDefinition)obj);
+                else if (obj is MethodDefinition)
+                {
+                    MethodDefinition method = (MethodDefinition)obj;
 
-                foreach (ParameterDefinition parameter in method.Parameters)
-                    this.Visit(parameter, method);
+                    foreach (ParameterDefinition parameter in method.Parameters)
+                        this.Visit(parameter, method);
 
-                this.Visit(method);
+                    this.Visit(method);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error encountered by {this.GetType()} whilst visiting {obj.GetType()}.", e);
             }
         }
 

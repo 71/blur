@@ -32,5 +32,16 @@ namespace Blur
         /// </para>
         /// </summary>
         public bool CleanUp { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets the list of all visitors that shall be used, by name.
+        /// <para>
+        /// Hint: use <see langword="nameof"/> to reference those visitors.
+        /// </para>
+        /// <para>
+        /// Default: <see cref="MixinVisitor"/>.
+        /// </para>
+        /// </summary>
+        public string[] Visitors { get; set; } = { nameof(MixinVisitor) };
     }
 }
