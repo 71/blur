@@ -33,16 +33,16 @@ namespace Blur
                                                 y => y.ParameterType.FullName, y => y.FullName));
         }
 
-        /// <inheritdoc cref="FindMethod(TypeDefinition, string, Type[])"/>
-        public static MethodDefinition FindMethod(this TypeDefinition type, string name, params TypeReference[] parameterTypes)
-        {
-            if (parameterTypes == null)
-                return type.Methods.FirstOrDefault(x => x.Name == name);
+        ///// <inheritdoc cref="FindMethod(TypeDefinition, string, Type[])"/>
+        //public static MethodDefinition FindMethod(this TypeDefinition type, string name, params TypeReference[] parameterTypes)
+        //{
+        //    if (parameterTypes == null)
+        //        return type.Methods.FirstOrDefault(x => x.Name == name);
 
-            return type.Methods.FirstOrDefault(x => x.Name == name
-                                          && x.Parameters.CompareSequences(parameterTypes,
-                                                y => y.ParameterType.FullName, y => y.FullName));
-        }
+        //    return type.Methods.FirstOrDefault(x => x.Name == name
+        //                                  && x.Parameters.CompareSequences(parameterTypes,
+        //                                        y => y.ParameterType.FullName, y => y.FullName));
+        //}
 
         /// <summary>
         /// Find a field, given its declaring <paramref name="type"/>

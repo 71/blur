@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using System.Threading.Tasks;
 using Mono.Cecil.Cil;
 using OpCode = System.Reflection.Emit.OpCode;
 using OpCodes = System.Reflection.Emit.OpCodes;
-using CecilOpCode = Mono.Cecil.Cil.OpCode;
-using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 using System.Reflection;
 using Mono.Cecil;
 
@@ -26,7 +22,8 @@ namespace Blur
         internal static int FixOffset(this Instruction ins)
         {
             Instruction prev = ins.Previous;
-            return ins.Offset = prev.Offset + prev.GetSize();
+            // ReSharper disable once MergeConditionalExpression
+            return ins.Offset = prev == null ? 0 : prev.Offset + prev.GetSize();
         }
 
         /// <summary>
@@ -57,7 +54,6 @@ namespace Blur
                 {
                     MethodDefinition method = ((MethodReference)operand).Resolve();
 
-                    // Old way: return method directly.
                     if (method.IsConstructor)
                         il.Emit(opcode, (ConstructorInfo)method.GetMethod());
                     else

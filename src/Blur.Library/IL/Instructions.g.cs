@@ -1077,156 +1077,156 @@ namespace Blur.Extensions
         #endregion // Instruction target
         
 
-        #region TypeDefinition type
+        #region TypeReference type
             
 
         /// <summary>
         /// Convert a boxable value to its boxed form
         /// </summary>
-        public static ILWriter Box(this ILWriter il, TypeDefinition type)
+        public static ILWriter Box(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Box, type);
                 
 
         /// <summary>
         /// Cast obj to class.
         /// </summary>
-        public static ILWriter Castclass(this ILWriter il, TypeDefinition type)
+        public static ILWriter Castclass(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Castclass, type);
                 
 
         /// <summary>
         /// Call a virtual method on a type constrained to be type T
         /// </summary>
-        public static ILWriter Constrained(this ILWriter il, TypeDefinition type)
+        public static ILWriter Constrained(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Constrained, type);
                 
 
         /// <summary>
         /// Copy a value type from src to dest.
         /// </summary>
-        public static ILWriter Cpobj(this ILWriter il, TypeDefinition type)
+        public static ILWriter Cpobj(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Cpobj, type);
                 
 
         /// <summary>
         /// Initialize the value at address dest.
         /// </summary>
-        public static ILWriter Initobj(this ILWriter il, TypeDefinition type)
+        public static ILWriter Initobj(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Initobj, type);
                 
 
         /// <summary>
         /// Test if obj is an instance of class, returning null or an instance of that class or interface.
         /// </summary>
-        public static ILWriter Isinst(this ILWriter il, TypeDefinition type)
+        public static ILWriter Isinst(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Isinst, type);
                 
 
         /// <summary>
         /// Copy the value stored at address src to the stack.
         /// </summary>
-        public static ILWriter Ldobj(this ILWriter il, TypeDefinition type)
+        public static ILWriter Ldobj(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Ldobj, type);
                 
 
         /// <summary>
         /// Convert metadata token to its runtime representation.
         /// </summary>
-        public static ILWriter Ldtoken(this ILWriter il, TypeDefinition type)
+        public static ILWriter Ldtoken(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Ldtoken, type);
                 
 
         /// <summary>
         /// Push a typed reference to ptr of type class onto the stack.
         /// </summary>
-        public static ILWriter Mkrefany(this ILWriter il, TypeDefinition type)
+        public static ILWriter Mkrefany(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Mkrefany, type);
                 
 
         /// <summary>
         /// Push the address stored in a typed reference.
         /// </summary>
-        public static ILWriter Refanyval(this ILWriter il, TypeDefinition type)
+        public static ILWriter Refanyval(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Refanyval, type);
                 
 
         /// <summary>
         /// Push the size, in bytes, of a type as an unsigned int32.
         /// </summary>
-        public static ILWriter Sizeof(this ILWriter il, TypeDefinition type)
+        public static ILWriter Sizeof(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Sizeof, type);
                 
 
         /// <summary>
         /// Store a value of type typeTok at an address.
         /// </summary>
-        public static ILWriter Stobj(this ILWriter il, TypeDefinition type)
+        public static ILWriter Stobj(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Stobj, type);
                 
 
         /// <summary>
         /// Extract a value-type from obj, its boxed representation.
         /// </summary>
-        public static ILWriter Unbox(this ILWriter il, TypeDefinition type)
+        public static ILWriter Unbox(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Unbox, type);
                 
 
         /// <summary>
         /// Extract a value-type from obj, its boxed representation
         /// </summary>
-        public static ILWriter Unbox_Any(this ILWriter il, TypeDefinition type)
+        public static ILWriter Unbox_Any(this ILWriter il, TypeReference type)
             => il.Emit(OpCodes.Unbox_Any, type);
                 
 
-        #endregion // TypeDefinition type
+        #endregion // TypeReference type
         
 
-        #region MethodDefinition method
+        #region MethodReference method
             
 
         /// <summary>
         /// Call method described by method.
         /// </summary>
-        public static ILWriter Call(this ILWriter il, MethodDefinition method)
+        public static ILWriter Call(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Call, method);
                 
 
         /// <summary>
         /// Call a method associated with an object.
         /// </summary>
-        public static ILWriter Callvirt(this ILWriter il, MethodDefinition method)
+        public static ILWriter Callvirt(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Callvirt, method);
                 
 
         /// <summary>
         /// Exit current method and jump to the specified method.
         /// </summary>
-        public static ILWriter Jmp(this ILWriter il, MethodDefinition method)
+        public static ILWriter Jmp(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Jmp, method);
                 
 
         /// <summary>
         /// Push a pointer to a method referenced by method, on the stack.
         /// </summary>
-        public static ILWriter Ldftn(this ILWriter il, MethodDefinition method)
+        public static ILWriter Ldftn(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Ldftn, method);
                 
 
         /// <summary>
         /// Convert metadata token to its runtime representation.
         /// </summary>
-        public static ILWriter Ldtoken(this ILWriter il, MethodDefinition method)
+        public static ILWriter Ldtoken(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Ldtoken, method);
                 
 
         /// <summary>
         /// Push address of virtual method on the stack.
         /// </summary>
-        public static ILWriter Ldvirtftn(this ILWriter il, MethodDefinition method)
+        public static ILWriter Ldvirtftn(this ILWriter il, MethodReference method)
             => il.Emit(OpCodes.Ldvirtftn, method);
                 
 
-        #endregion // MethodDefinition method
+        #endregion // MethodReference method
         
 
         #region CallSite call
@@ -1355,59 +1355,59 @@ namespace Blur.Extensions
         #endregion // double nbr
         
 
-        #region FieldDefinition field
+        #region FieldReference field
             
 
         /// <summary>
         /// Push the value of field of object (or value type) obj, onto the stack.
         /// </summary>
-        public static ILWriter Ldfld(this ILWriter il, FieldDefinition field)
+        public static ILWriter Ldfld(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Ldfld, field);
                 
 
         /// <summary>
         /// Push the address of field of object obj on the stack.
         /// </summary>
-        public static ILWriter Ldflda(this ILWriter il, FieldDefinition field)
+        public static ILWriter Ldflda(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Ldflda, field);
                 
 
         /// <summary>
         /// Push the value of field on the stack.
         /// </summary>
-        public static ILWriter Ldsfld(this ILWriter il, FieldDefinition field)
+        public static ILWriter Ldsfld(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Ldsfld, field);
                 
 
         /// <summary>
         /// Push the address of the static field, field, on the stack.
         /// </summary>
-        public static ILWriter Ldsflda(this ILWriter il, FieldDefinition field)
+        public static ILWriter Ldsflda(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Ldsflda, field);
                 
 
         /// <summary>
         /// Convert metadata token to its runtime representation.
         /// </summary>
-        public static ILWriter Ldtoken(this ILWriter il, FieldDefinition field)
+        public static ILWriter Ldtoken(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Ldtoken, field);
                 
 
         /// <summary>
         /// Replace the value of field of the object obj with value.
         /// </summary>
-        public static ILWriter Stfld(this ILWriter il, FieldDefinition field)
+        public static ILWriter Stfld(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Stfld, field);
                 
 
         /// <summary>
         /// Replace the value of field with val.
         /// </summary>
-        public static ILWriter Stsfld(this ILWriter il, FieldDefinition field)
+        public static ILWriter Stsfld(this ILWriter il, FieldReference field)
             => il.Emit(OpCodes.Stsfld, field);
                 
 
-        #endregion // FieldDefinition field
+        #endregion // FieldReference field
         
 
         #region string str
@@ -1423,30 +1423,30 @@ namespace Blur.Extensions
         #endregion // string str
         
 
-        #region TypeDefinition itemType
+        #region TypeReference itemType
             
 
         /// <summary>
         /// Create a new array with elements of type etype.
         /// </summary>
-        public static ILWriter Newarr(this ILWriter il, TypeDefinition itemType)
+        public static ILWriter Newarr(this ILWriter il, TypeReference itemType)
             => il.Emit(OpCodes.Newarr, itemType);
                 
 
-        #endregion // TypeDefinition itemType
+        #endregion // TypeReference itemType
         
 
-        #region MethodDefinition ctor
+        #region MethodReference ctor
             
 
         /// <summary>
         /// Allocate an uninitialized object or value type and call ctor.
         /// </summary>
-        public static ILWriter Newobj(this ILWriter il, MethodDefinition ctor)
+        public static ILWriter Newobj(this ILWriter il, MethodReference ctor)
             => il.Emit(OpCodes.Newobj, ctor);
                 
 
-        #endregion // MethodDefinition ctor
+        #endregion // MethodReference ctor
         
 
         #region params Instruction[] instructions

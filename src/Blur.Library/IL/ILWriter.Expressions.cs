@@ -36,10 +36,12 @@ namespace Blur
                 .DeclaredMethods.First(x => x.Name == "AnalyzeLambda" && x.IsStatic)
                 .Invoke(null, new object[] { lambda });
 
-            object compiler = Activator.CreateInstance(LambdaCompilerType.AsType(), tree, lambda);
+            //object compiler = Activator.CreateInstance(LambdaCompilerType.AsType(), tree, lambda);
+            ConstructorInfo ctor = LambdaCompilerType.DeclaredConstructors.First(x => x.GetParameters().Length == 2);
+            object compiler = ctor.Invoke(new[] { tree, lambda });
 
             LambdaCompilerType
-                .DeclaredMethods.First(x => x.Name == "EmitLambdaBody" && !x.IsStatic)
+                .DeclaredMethods.First(x => x.Name == "EmitLambdaBody" && !x.IsStatic && x.GetParameters().Length == 3)
                 .Invoke(compiler, new object[] { null, inlined, lambda.TailCall ? 0x0100 : 0x0400 });
 
             return (ILGenerator)LambdaCompilerType
@@ -60,8 +62,9 @@ namespace Blur
             // 
             //  return il.BakeByteArray();
 
-            return (byte[])il.GetType().GetTypeInfo()
-                .DeclaredMethods.First(x => x.Name == "BakeByteArray" && !x.IsStatic)
+            return (byte[])typeof(ILGenerator).GetTypeInfo()
+                .DeclaredMethods.First(x =>
+                    x.Name == "BakeByteArray" && !x.IsStatic)
                 .Invoke(il, new object[0]);
         }
         #endregion
@@ -69,29 +72,29 @@ namespace Blur
         /// <summary>
         /// Convert a <see cref="LambdaExpression"/> to <see cref="Instruction"/>s.
         /// </summary>
-        public static IEnumerable<Instruction> FromExpression<TDelegate>(Expression<TDelegate> expr)
+        public static IEnumerable<Instruction> FromExpression<TDelegate>(Expression<TDelegate> expr, bool isTargetStatic = false)
         {
-            return FromByteArray(GetBodyAsBytes(Compile(expr, false)));
+            return FromByteArray(GetBodyAsBytes(Compile(expr, false)), isTargetStatic);
         }
 
         /// <summary>
         /// Convert an <see cref="System.Linq.Expressions.Expression"/> to <see cref="Instruction"/>s.
         /// </summary>
-        public static IEnumerable<Instruction> FromExpression(Expression expr)
+        public static IEnumerable<Instruction> FromExpression(Expression expr, bool isTargetStatic = false)
         {
-            return FromByteArray(GetBodyAsBytes(Compile(System.Linq.Expressions.Expression.Lambda(expr, false), true)));
+            return FromByteArray(GetBodyAsBytes(Compile(System.Linq.Expressions.Expression.Lambda(expr, false), true)), isTargetStatic);
         }
 
         /// <summary>
         /// Print the IL representation of a <see cref="LambdaExpression"/>.
         /// </summary>
         public ILWriter Expression<TDelegate>(Expression<TDelegate> expr)
-            => this.Parse(GetBodyAsBytes(Compile(expr, false)));
+            => this.Parse(GetBodyAsBytes(Compile(expr, false)), Method.IsStatic);
 
         /// <summary>
         /// Print the IL representation of an <see cref="System.Linq.Expressions.Expression"/>.
         /// </summary>
         public ILWriter Expression(Expression expr)
-            => this.Parse(GetBodyAsBytes(Compile(System.Linq.Expressions.Expression.Lambda(expr, false), true)));
+            => this.Parse(GetBodyAsBytes(Compile(System.Linq.Expressions.Expression.Lambda(expr, false), true)), Method.IsStatic);
     }
 }

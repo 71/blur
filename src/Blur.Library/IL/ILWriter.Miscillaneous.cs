@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Blur.Extensions;
 
 namespace Blur
 {
@@ -66,6 +66,26 @@ namespace Blur
                 pos += instructions.Count - countBefore;
             }
         }
+        #endregion
+
+        #region Cast
+        /// <summary>
+        /// Casts the value at the top of the stack to <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Cast(TypeReference type)
+        {
+            return type.IsValueType ? this.Unbox_Any(type) : this.Castclass(type);
+        }
+
+        /// <summary>
+        /// Casts the value at the top of the stack to <typeparamref name="T"/>.
+        /// </summary>
+        public ILWriter Cast<T>() => this.Cast(typeof(T).GetReference());
+
+        /// <summary>
+        /// Casts the value at the top of the stack to <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Cast(Type type) => this.Cast(type.GetReference());
         #endregion
     }
 }

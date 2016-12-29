@@ -21,20 +21,25 @@ namespace Blur
         private readonly Lazy<ReadOnlyCollection<Instruction>> readOnlyInstructions;
 
         internal readonly IList<Instruction> instructions;
-        internal readonly List<VariableDefinition> variables;
+        internal readonly IList<VariableDefinition> variables;
         internal int position;
 
         /// <summary>
         /// Returns whether or not this <see cref="ILWriter"/>
         /// is at the end of the body being written.
         /// </summary>
-        public bool AtEnd => position == instructions.Count - 1;
+        public bool AtEnd => position >= instructions.Count - 1;
 
         /// <summary>
         /// Returns the count of all instructions
         /// to write.
         /// </summary>
         public int Count => instructions.Count;
+
+        /// <summary>
+        /// Returns the offset at the current position.
+        /// </summary>
+        public int CurrentOffset => Count == 0 ? 0 : instructions[position].Offset;
 
         /// <summary>
         /// Enumerates all <see cref="Instruction"/>s printed
@@ -66,11 +71,12 @@ namespace Blur
 
         internal ILWriter(MethodDefinition method, bool clean)
         {
+            this.Method = method;
             this.instructions = method.Body.Instructions;
+            this.variables = method.Body.Variables;
+
             this.readOnlyInstructions =
                 new Lazy<ReadOnlyCollection<Instruction>>(() => new ReadOnlyCollection<Instruction>(instructions));
-            this.variables = new List<VariableDefinition>();
-            this.Method = method;
 
             if (clean)
                 this.instructions.Clear();
@@ -129,6 +135,24 @@ namespace Blur
 
             if (position == instructions.Count)
                 position--;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes every instruction that matches <paramref name="predicate"/>,
+        /// and returns <see langword="this"/>.
+        /// </summary>
+        public ILWriter Remove(Predicate<Instruction> predicate)
+        {
+            for (int i = 0; i < instructions.Count; i++)
+            {
+                if (predicate(instructions[i]))
+                    instructions.RemoveAt(i--);
+            }
+
+            if (position >= instructions.Count)
+                position = instructions.Count - 1;
 
             return this;
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Blur
 {
@@ -126,6 +127,99 @@ namespace Blur
                 array[i] = converter(self[i]);
 
             return array;
+        }
+        #endregion
+
+        #region Clone
+        /// <summary>
+        /// Returns a new <see cref="Instruction"/> matching the
+        /// given <paramref name="instruction"/>.
+        /// </summary>
+        public static Instruction Clone(this Instruction instruction)
+        {
+            OpCode opcode = instruction.OpCode;
+            object operand = instruction.Operand;
+
+            if (operand == null)
+                return Instruction.Create(opcode);
+            if (operand is string)
+                return Instruction.Create(opcode, (string)operand);
+
+            if (operand is byte)
+                return Instruction.Create(opcode, (byte)operand);
+            if (operand is sbyte)
+                return Instruction.Create(opcode, (sbyte)operand);
+            if (operand is float)
+                return Instruction.Create(opcode, (float)operand);
+            if (operand is double)
+                return Instruction.Create(opcode, (double)operand);
+            if (operand is int)
+                return Instruction.Create(opcode, (int)operand);
+            if (operand is long)
+                return Instruction.Create(opcode, (long)operand);
+
+            if (operand is Instruction)
+                return Instruction.Create(opcode, (Instruction)operand);
+            if (operand is Instruction[])
+                return Instruction.Create(opcode, (Instruction[])operand);
+            if (operand is CallSite)
+                return Instruction.Create(opcode, (CallSite)operand);
+
+            if (operand is MethodReference)
+                return Instruction.Create(opcode, (MethodReference)operand);
+            if (operand is FieldReference)
+                return Instruction.Create(opcode, (FieldReference)operand);
+            if (operand is TypeReference)
+                return Instruction.Create(opcode, (TypeReference)operand);
+            if (operand is VariableDefinition)
+                return Instruction.Create(opcode, (VariableDefinition)operand);
+            if (operand is ParameterDefinition)
+                return Instruction.Create(opcode, (ParameterDefinition)operand);
+
+            throw new ArgumentException("Invalid instruction given.", nameof(instruction));
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="VariableDefinition"/> matching the
+        /// given <paramref name="variable"/>.
+        /// </summary>
+        public static VariableDefinition Clone(this VariableDefinition variable)
+        {
+            return new VariableDefinition(variable.VariableType);
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="ParameterDefinition"/> matching the
+        /// given <paramref name="parameter"/>.
+        /// </summary>
+        public static ParameterDefinition Clone(this ParameterDefinition parameter, bool withCustomAttributes = true)
+        {
+            ParameterDefinition newParameter = new ParameterDefinition(parameter.Name, parameter.Attributes, parameter.ParameterType)
+            {
+                HasConstant = parameter.HasConstant,
+                HasDefault = parameter.HasDefault,
+                HasFieldMarshal = parameter.HasFieldMarshal,
+
+                IsIn = parameter.IsIn,
+                IsOut = parameter.IsOut,
+                IsReturnValue = parameter.IsReturnValue,
+                IsLcid = parameter.IsLcid,
+                IsOptional = parameter.IsOptional,
+
+                MarshalInfo = parameter.MarshalInfo,
+                Constant = parameter.Constant
+            };
+
+            if (withCustomAttributes && parameter.HasCustomAttributes)
+            {
+                for (int i = 0; i < parameter.CustomAttributes.Count; i++)
+                {
+                    CustomAttribute oldAttr = parameter.CustomAttributes[i];
+                    newParameter.CustomAttributes.Add(new CustomAttribute(oldAttr.Constructor, oldAttr.GetBlob()));
+                }
+            }
+
+            return newParameter;
         }
         #endregion
     }

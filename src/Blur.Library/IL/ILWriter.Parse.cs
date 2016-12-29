@@ -7,8 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using ReflectionOpCode = System.Reflection.Emit.OpCode;
-using ReflectionOpCodes = System.Reflection.Emit.OpCodes;
 
 namespace Blur
 {
@@ -27,13 +25,13 @@ namespace Blur
 
             public CodeReaderProxy(Stream ms, MetadataReaderProxy metadata) : base(ms)
             {
-                Type proxy = typeof(Instruction).GetTypeInfo().Assembly.GetType("CodeReader");
-                this.codeReader = Activator.CreateInstance(proxy, metadata);
+                TypeInfo proxy = typeof(Instruction).GetTypeInfo().Assembly.GetType("Mono.Cecil.Cil.CodeReader").GetTypeInfo();
+                this.codeReader = proxy.DeclaredConstructors.First(x => x.GetParameters().Length == 1).Invoke(new[] { metadata.metadataReader });
 
-                this.readVariables = proxy.GetRuntimeMethod(nameof(ReadVariables), new[] { typeof(MetadataToken) });
-                this.getCallSite = proxy.GetRuntimeMethod(nameof(GetCallSite), new[] { typeof(MetadataToken) });
-                this.getString = proxy.GetRuntimeMethod(nameof(GetString), new[] { typeof(MetadataToken) });
-                this.getParameter = proxy.GetRuntimeMethod(nameof(GetParameter), new[] { typeof(int) });
+                this.readVariables = proxy.DeclaredMethods.First(x => x.Name == nameof(ReadVariables));
+                this.getCallSite = proxy.DeclaredMethods.First(x => x.Name == nameof(GetCallSite));
+                this.getString = proxy.DeclaredMethods.First(x => x.Name == nameof(GetString));
+                this.getParameter = proxy.DeclaredMethods.First(x => x.Name == nameof(GetParameter));
             }
 
             public MetadataToken ReadToken()
@@ -54,15 +52,18 @@ namespace Blur
 
         private class MetadataReaderProxy
         {
-            private readonly object metadataReader;
+            internal readonly object metadataReader;
             private readonly MethodInfo lookupToken;
 
             public MetadataReaderProxy(ModuleDefinition module)
             {
-                Type proxy = metadataReader.GetType();
-                this.metadataReader = typeof(ModuleDefinition).GetRuntimeField("reader").GetValue(module);
+                this.metadataReader = typeof(ModuleDefinition).GetTypeInfo()
+                    .DeclaredFields.First(x => x.Name == "reader")
+                    .GetValue(module);
 
-                this.lookupToken = proxy.GetRuntimeMethod(nameof(LookupToken), new[] { typeof(MetadataToken) });
+                Type proxy = metadataReader.GetType();
+                this.lookupToken = proxy.GetTypeInfo()
+                    .DeclaredMethods.First(x => x.Name == nameof(LookupToken));
             }
 
             public IMetadataTokenProvider LookupToken(MetadataToken token)
@@ -71,11 +72,6 @@ namespace Blur
         #endregion
 
         #region Utils
-        private static void Advance(BinaryReader reader, int count)
-        {
-            reader.BaseStream.Seek(count, SeekOrigin.Current);
-        }
-
         private class ParseContext
         {
             public CodeReaderProxy Code { get; set; }
@@ -84,35 +80,25 @@ namespace Blur
             public IILVisitor Visitor { get; set; }
         }
 
-        static void ParseFatMethod(ParseContext context)
-        {
-            var code = context.Code;
+        private static readonly TypeInfo OpCodesType = typeof(OpCodes).GetTypeInfo();
+        private static readonly OpCode[] OneByteOpCode
+            = (OpCode[])OpCodesType.DeclaredFields.First(x => x.Name == nameof(OneByteOpCode)).GetValue(null);
+        private static readonly OpCode[] TwoBytesOpCode
+            = (OpCode[])OpCodesType.DeclaredFields.First(x => x.Name == nameof(TwoBytesOpCode)).GetValue(null);
 
-            Advance(code, 4);
-            var code_size = code.ReadInt32();
-            var local_var_token = code.ReadToken();
-
-            if (local_var_token != MetadataToken.Zero)
-                context.Variables = code.ReadVariables(local_var_token);
-
-            ParseCode(code_size, context);
-        }
-
-        static void ParseCode(int code_size, ParseContext context)
+        static void ParseCode(ParseContext context)
         {
             var code = context.Code;
             var metadata = context.Metadata;
             var visitor = context.Visitor;
-
-            var start = code.Position;
-            var end = start + code_size;
+            var end = code.BaseStream.Length;
 
             while (code.Position < end)
             {
                 var il_opcode = code.ReadByte();
                 var opcode = il_opcode != 0xfe
-                    ? (new OpCode[0xe0 + 1])[il_opcode]
-                    : (new OpCode[0xe0 + 1])[code.ReadByte()];
+                    ? OneByteOpCode[il_opcode]
+                    : TwoBytesOpCode[code.ReadByte()];
 
                 switch (opcode.OperandType)
                 {
@@ -223,28 +209,13 @@ namespace Blur
             {
                 ParseContext ctx = new ParseContext
                 {
-                    Code = new CodeReaderProxy(ms, metadata),
+                    Code = reader,
                     Metadata = metadata,
-                    Visitor = visitor
+                    Visitor = visitor,
+                    Variables = new Collection<VariableDefinition>()
                 };
 
-                byte flags = reader.ReadByte();
-
-                switch (flags & 0x3)
-                {
-                    case 0x2:
-                        int code_size = flags >> 2;
-                        ParseCode(code_size, ctx);
-                        break;
-
-                    case 0x3:
-                        Advance(reader, -1);
-                        ParseFatMethod(ctx);
-                        break;
-
-                    default:
-                        throw new NotSupportedException();
-                }
+                ParseCode(ctx);
             }
         }
         #endregion
@@ -272,48 +243,50 @@ namespace Blur
 
         class ILVisitor : IILVisitor, IEnumerable<Instruction>
         {
+            private readonly bool ToStatic;
             private readonly IList<Instruction> Instructions;
             private int Position;
 
-            public ILVisitor(IList<Instruction> ins, int position)
+            public ILVisitor(IList<Instruction> ins, int position, bool toStatic)
             {
                 this.Instructions = ins;
                 this.Position = position;
+                this.ToStatic = toStatic;
             }
 
             public IEnumerator<Instruction> GetEnumerator() => Instructions.GetEnumerator();
             IEnumerator IEnumerable.GetEnumerator() => Instructions.GetEnumerator();
 
-            private static ReflectionOpCode R(OpCode opcode)
+            public void OnInlineNone(OpCode opcode)
             {
-                return (ReflectionOpCode)typeof(ReflectionOpCodes).GetTypeInfo()
-                    .GetDeclaredField(opcode.Name)
-                    .GetValue(null);
+                Instruction ins = Instruction.Create(opcode);
+                if (ToStatic)
+                    // The Lambda compiler compiles the method as if it were an instance method.
+                    // If we're making a static method, that's a problem. We fix it.
+                    UpdateInstruction(ins, true);
+                Instructions.Insert(this.Position++, ins);
             }
 
-            public void OnInlineNone(OpCode opcode)
-                => Instructions.Add(Instruction.Create(opcode));
-
             public void OnInlineSByte(OpCode opcode, sbyte value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineByte(OpCode opcode, byte value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineInt32(OpCode opcode, int value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineInt64(OpCode opcode, long value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineSingle(OpCode opcode, float value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineDouble(OpCode opcode, double value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineString(OpCode opcode, string value)
-                => Instructions.Add(Instruction.Create(opcode, value));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, value));
 
             public void OnInlineBranch(OpCode opcode, int offset)
             {
@@ -327,7 +300,7 @@ namespace Blur
                     }
                 }
 
-                Instructions.Add(Instruction.Create(opcode, target));
+                Instructions.Insert(this.Position++, Instruction.Create(opcode, target));
             }
 
             public void OnInlineSwitch(OpCode opcode, int[] offsets)
@@ -347,36 +320,36 @@ namespace Blur
                     NextTarget: ;
                 }
 
-                Instructions.Add(Instruction.Create(opcode, targets));
+                Instructions.Insert(this.Position++, Instruction.Create(opcode, targets));
             }
 
             public void OnInlineVariable(OpCode opcode, VariableDefinition variable)
-                => Instructions.Add(Instruction.Create(opcode, variable));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, variable));
 
             public void OnInlineArgument(OpCode opcode, ParameterDefinition parameter)
-                => Instructions.Add(Instruction.Create(opcode, parameter));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, parameter));
 
             public void OnInlineSignature(OpCode opcode, CallSite callSite)
-                => Instructions.Add(Instruction.Create(opcode, callSite));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, callSite));
 
             public void OnInlineType(OpCode opcode, TypeReference type)
-                => Instructions.Add(Instruction.Create(opcode, type));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, type));
 
             public void OnInlineField(OpCode opcode, FieldReference field)
-                => Instructions.Add(Instruction.Create(opcode, field));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, field));
 
             public void OnInlineMethod(OpCode opcode, MethodReference method)
-                => Instructions.Add(Instruction.Create(opcode, method));
+                => Instructions.Insert(this.Position++, Instruction.Create(opcode, method));
         }
 #endregion
 
         /// <summary>
         /// Parse a <see cref="byte"/> array to <see cref="Instruction"/>s.
         /// </summary>
-        public static IEnumerable<Instruction> FromByteArray(byte[] bytes)
+        public static IEnumerable<Instruction> FromByteArray(byte[] bytes, bool isTargetStatic)
         {
             List<Instruction> instructions = new List<Instruction>();
-            ILVisitor visitor = new ILVisitor(instructions, 0);
+            ILVisitor visitor = new ILVisitor(instructions, 0, isTargetStatic);
             Parse(Processor.TargetModuleDefinition, bytes, visitor);
             return instructions.AsEnumerable();
         }
@@ -385,9 +358,9 @@ namespace Blur
         /// Parse a <see cref="byte"/> array to <see cref="Instruction"/>s,
         /// and add them to the instructions to print.
         /// </summary>
-        public ILWriter Parse(byte[] bytes)
+        public ILWriter Parse(byte[] bytes, bool isTargetStatic)
         {
-            ILVisitor visitor = new ILVisitor(this.instructions, position);
+            ILVisitor visitor = new ILVisitor(this.instructions, position, isTargetStatic);
             Parse(Processor.TargetModuleDefinition, bytes, visitor);
             return this;
         }

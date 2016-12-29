@@ -286,15 +286,15 @@ namespace Blur.Extensions
                 return "string str";
 
             else if (ins.Contains("<field"))
-                return "FieldDefinition field";
+                return "FieldReference field";
             else if (ins.Contains("<method"))
-                return "MethodDefinition method";
+                return "MethodReference method";
             else if (ins.Contains("<class") || ins.Contains("<type") || ins.Contains("<valuetype") || ins.Contains("<thisType"))
-                return "TypeDefinition type";
+                return "TypeReference type";
             else if (ins.Contains("<ctor"))
-                return "MethodDefinition ctor";
+                return "MethodReference ctor";
             else if (ins.Contains("<etype"))
-                return "TypeDefinition itemType";
+                return "TypeReference itemType";
 
             else if (ins.Contains("<param"))
                 return "ParameterDefinition parameter";

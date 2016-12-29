@@ -66,24 +66,12 @@ namespace Blur
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static T Variable<T>(int position) => Throw<T>();
 
-        /// <inheritdoc cref="Variable(string)"/>
-        /// <param name="varName">The name of the variable.</param>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static T Variable<T>(string varName) => Throw<T>();
-
         /// <summary>
         /// Gets the variable at the given <paramref name="position"/>.
         /// </summary>
         /// <param name="position">The 0-based index of the variable.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static object Variable(int position) => Throw<object>();
-
-        /// <summary>
-        /// Gets the variable whose name is <paramref name="varName"/>.
-        /// </summary>
-        /// <param name="varName">The name of the variable.</param>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static object Variable(string varName) => Throw<object>();
         #endregion
     }
 }

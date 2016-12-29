@@ -139,9 +139,15 @@ namespace Blur
         /// </summary>
         public static TypeDefinition GetDefinition(this TypeInfo type)
         {
+            if (type.DeclaringType != null)
+                return type.DeclaringType.GetDefinition().NestedTypes.First(x => x.Name == type.Name);
+
             TypeReference reference;
             if (Processor.TargetModuleDefinition.TryGetTypeReference(type.FullName, out reference))
                 return Processor.TargetModuleDefinition.ImportReference(reference).Resolve();
+            if ((reference = Processor.TargetModuleDefinition.GetType(type.FullName)) != null)
+                return (TypeDefinition)reference;
+
             throw new Exception($"Cannot get definition for {type.FullName}");
         }
 
@@ -151,9 +157,15 @@ namespace Blur
         /// </summary>
         public static TypeDefinition GetDefinition(this Type type)
         {
+            if (type.DeclaringType != null)
+                return type.DeclaringType.GetDefinition().NestedTypes.First(x => x.Name == type.Name);
+
             TypeReference reference;
             if (Processor.TargetModuleDefinition.TryGetTypeReference(type.FullName, out reference))
                 return Processor.TargetModuleDefinition.ImportReference(reference).Resolve();
+            if ((reference = Processor.TargetModuleDefinition.GetType(type.FullName)) != null)
+                return (TypeDefinition)reference;
+
             throw new Exception($"Cannot get definition for {type.FullName}");
         }
 
