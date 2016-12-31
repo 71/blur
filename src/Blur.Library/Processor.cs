@@ -73,17 +73,23 @@ namespace Blur
                 // Find all visitors in this assembly, and referenced assemblies.
                 List<BlurVisitor> visitors = FindVisitors();
 
-                // Execute all visitors BEFORE.
-                if (visitors.Count > 0)
-                    ExecuteVisitors(visitors, ProcessingState.Before);
+                visitors.Add(new AttributesVisitor());
+                visitors.Sort((a, b) => a.Priority - b.Priority);
 
-                // Execute the internal visitor.
-                AttributesVisitor internalVisitor = new AttributesVisitor();
-                ExecuteVisitors(new[] { internalVisitor }, ProcessingState.Before);
+                // Execute all visitors.
+                IList<TypeDefinition> targetTypes = TargetDefinition.MainModule.Types;
 
-                // Execute all visitors AFTER.
-                if (visitors.Count > 0)
-                    ExecuteVisitors(visitors, ProcessingState.After);
+                for (int i = 0; i < visitors.Count; i++)
+                {
+                    visitors[i].Visit(TargetDefinition);
+
+                    for (int o = 0; o < targetTypes.Count; o++)
+                    {
+                        TypeDefinition targetType = targetTypes[o];
+
+                        ExecuteVisitor(visitors[i], targetType);
+                    }
+                }
 
                 // Optionally clean up.
                 if (Settings.CleanUp)
@@ -149,85 +155,46 @@ namespace Blur
         }
 
         /// <summary>
-        /// Execute the given visitors on the target assembly.
-        /// </summary>
-        private static void ExecuteVisitors(IReadOnlyList<BlurVisitor> visitors, ProcessingState state)
-        {
-            var targetTypes = TargetDefinition.MainModule.Types;
-
-            if (state == ProcessingState.Before)
-            {
-                for (int i = 0; i < visitors.Count; i++)
-                    visitors[i].Visit(TargetDefinition, ProcessingState.Before);
-            }
-
-            for (int i = 0; i < targetTypes.Count; i++)
-                ExecuteVisitors(visitors, state, targetTypes[i]);
-
-            if (state == ProcessingState.After)
-            {
-                for (int i = 0; i < visitors.Count; i++)
-                    visitors[i].Visit(TargetDefinition, ProcessingState.After);
-            }
-        }
-
-        /// <summary>
         /// Execute the given visitors on a type.
         /// </summary>
-        private static void ExecuteVisitors(IReadOnlyList<BlurVisitor> visitors, ProcessingState state,
-            TypeDefinition targetType)
+        private static void ExecuteVisitor(BlurVisitor visitor, TypeDefinition targetType)
         {
             // Fields
-            ExecuteVisitors(visitors, state, targetType.Fields);
+            ExecuteVisitor(visitor, targetType.Fields);
 
             // Events
-            ExecuteVisitors(visitors, state, targetType.Events);
+            ExecuteVisitor(visitor, targetType.Events);
 
             // Properties
-            ExecuteVisitors(visitors, state, targetType.Properties);
+            ExecuteVisitor(visitor, targetType.Properties);
 
             // Methods
-            ExecuteVisitors(visitors, state, targetType.Methods);
+            ExecuteVisitor(visitor, targetType.Methods);
 
             // Nested types
             foreach (TypeDefinition type in targetType.NestedTypes)
-                ExecuteVisitors(visitors, state, type);
+                ExecuteVisitor(visitor, type);
 
             // Type
-            for (int x = 0; x < visitors.Count; x++)
-                visitors[x].Visit(targetType, state);
+            visitor.Visit(targetType);
         }
 
         /// <summary>
         /// Execute the given visitors on a list of members.
         /// </summary>
-        private static void ExecuteVisitors<T>(IReadOnlyList<BlurVisitor> visitors, ProcessingState state,
-            IList<T> toVisit) where T : IMemberDefinition
+        private static void ExecuteVisitor<T>(BlurVisitor visitor, IList<T> toVisit) where T : IMemberDefinition
         {
             int count = toVisit.Count;
 
             for (int i = 0; i < count; i++)
             {
-                for (int x = 0; x < visitors.Count; x++)
+                visitor.Visit(toVisit[i]);
+
+                if (toVisit.Count != count)
                 {
-                    visitors[x].Visit(toVisit[i], state);
-
-                    if (toVisit.Count != count)
-                    {
-                        i += toVisit.Count - count;
-                        count = toVisit.Count;
-                        continue;
-                    }
-
-                    if (toVisit[i].DeclaringType != null)
-                        continue;
-
-                    // The visitor removed this member...
-                    i--;
-                    goto EndMemberLoop;
+                    i += toVisit.Count - count;
+                    count = toVisit.Count;
                 }
-
-                EndMemberLoop: ;
             }
         }
 
@@ -240,6 +207,12 @@ namespace Blur
         /// </remarks>
         private static void CleanUp()
         {
+            // Get a list of all assemblies that shall be unreferenced.
+            string[] toUnreference = new string[Settings.AdditionalUnreferencedAssemblies.Length + 1];
+
+            toUnreference[0] = "Blur.Library";
+            Settings.AdditionalUnreferencedAssemblies.CopyTo(toUnreference, 1);
+
             // Remove visitors / weavers.
             var types = TargetDefinition.MainModule.Types;
 
@@ -260,7 +233,7 @@ namespace Blur
             {
                 CustomAttribute attribute = customAttributesOnAssembly[i];
 
-                if (attribute.AttributeType.FullName == $"{nameof(Blur)}.{nameof(BlurAttribute)}")
+                if (Array.IndexOf(toUnreference, attribute.AttributeType.Scope.Name) != -1)
                 {
                     customAttributesOnAssembly.RemoveAt(i);
                     break;
@@ -268,14 +241,11 @@ namespace Blur
             }
 
             // Remove reference to Blur.
-            string blurFullname = typeof(BlurVisitor).GetTypeInfo().Assembly.GetName().FullName;
-            string cecilFullname = typeof(TypeDefinition).GetTypeInfo().Assembly.GetName().FullName;
             var references = TargetDefinition.MainModule.AssemblyReferences;
 
             for (int i = 0; i < references.Count; i++)
             {
-                if (references[i].FullName == blurFullname
-                 || references[i].FullName == cecilFullname)
+                if (Array.IndexOf(toUnreference, references[i].Name) != -1)
                 {
                     references.RemoveAt(i--);
                 }

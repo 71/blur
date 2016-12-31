@@ -14,10 +14,14 @@ namespace Blur
     {
         private static bool shouldCleanUp;
 
-        internal AttributesVisitor() : base(ProcessingState.Before)
+        /// <inheritdoc/>
+        public override int Priority => 100;
+
+        internal AttributesVisitor()
         {
             shouldCleanUp = Processor.Settings.CleanUp;
         }
+
 
         #region Utils
         /// <summary>

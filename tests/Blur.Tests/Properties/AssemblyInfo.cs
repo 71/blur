@@ -38,4 +38,4 @@ using Blur.Tests.Library;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
 // Make sure blur is referenced.
-[assembly: Blur]
+[assembly: Blur(AdditionalUnreferencedAssemblies = new[] { "Mono.Cecil", "Blur.Tests.Library" })]

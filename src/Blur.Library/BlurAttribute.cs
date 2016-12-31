@@ -34,7 +34,7 @@ namespace Blur
         public bool CleanUp { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets the list of all visitors that shall be used, by name.
+        /// Gets or sets the list of all visitors that will be used, by name.
         /// <para>
         /// Hint: use <see langword="nameof"/> to reference those visitors.
         /// </para>
@@ -47,5 +47,17 @@ namespace Blur
         /// </para>
         /// </summary>
         public string[] Visitors { get; set; } = null;
+
+        /// <summary>
+        /// Gets or sets the list of all assemblies that will be unreferenced
+        /// if <see cref="CleanUp"/> is <see langword="true"/>, by name.
+        /// <para>
+        /// Default: <c>{ "Mono.Cecil" }</c>
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// Blur.Library is unreferenced by default.
+        /// </remarks>
+        public string[] AdditionalUnreferencedAssemblies { get; set; } = { "Mono.Cecil" };
     }
 }

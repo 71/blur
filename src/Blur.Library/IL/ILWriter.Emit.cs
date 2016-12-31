@@ -36,6 +36,13 @@ namespace Blur
             return this;
         }
 
+        private ILWriter Emit(params Instruction[] ins)
+        {
+            for (int i = 0; i < ins.Length; i++)
+                this.Emit(ins[i]);
+            return this;
+        }
+
         /// <summary>
         /// Print an <see cref="OpCode"/>.
         /// </summary>

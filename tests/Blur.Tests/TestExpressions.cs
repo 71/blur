@@ -38,15 +38,12 @@ namespace Blur.Tests
             );
 
             addMethod.Rewrite().Expression(expr);
-            greatestMethod.Rewrite().Body<Func<int, int, int>>((a, b) => a > b ? a : b);
 
-            //greatestMethod.Rewrite()
-            //              .Body<Func<int>>(() =>
-            //              {
-            //                  return Context.Argument<int>(0) > Context.Argument<int>(1)
-            //                      ? Context.Argument<int>(0)
-            //                      : Context.Argument<int>(1);
-            //              });
+            greatestMethod.Rewrite()
+                          .Delegate(Context.Argument<int>(0), Context.Argument<int>(1), (a, b) =>
+                          {
+                              return a > b ? a : b;
+                          });
         }
     }
 }

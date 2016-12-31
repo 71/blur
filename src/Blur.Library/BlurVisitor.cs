@@ -1,35 +1,8 @@
 ﻿using System;
 using Mono.Cecil;
-using System.Reflection;
 
 namespace Blur
-{
-    #region ProcessingState enum
-    /// <summary>
-    /// Enum used by <see cref="BlurVisitor"/> to
-    /// behave differently based on the state of
-    /// the processing of an assembly.
-    /// </summary>
-    [Flags]
-    public enum ProcessingState
-    {
-        /// <summary>
-        /// Processing hasn't started yet.
-        /// </summary>
-        Before = 1,
-
-        /// <summary>
-        /// Processing has ended.
-        /// </summary>
-        After = 2,
-
-        /// <summary>
-        /// Accept both <see cref="Before"/> and <see cref="After"/>.
-        /// </summary>
-        Any = Before | After
-    }
-    #endregion
-
+{   
     /// <summary>
     /// Represents an <see cref="object"/> that can register to events
     /// to edit <see cref="object"/>s.
@@ -42,38 +15,24 @@ namespace Blur
     public abstract class BlurVisitor
     {
         /// <summary>
-        /// Gets the <see cref="ProcessingState"/> that must be
-        /// matched to execute this visitor.
+        /// Gets the priority, the number that defines when a Blur visitor should run,
+        /// compared to other visitors.
+        /// <para>
+        /// The priority must be a number between 0 and 1000.
+        /// </para>
+        /// <para>
+        /// For example, the internal <see cref="BlurVisitor"/>, that visits
+        /// all members marked with an <see cref="IWeaver"/> attribute,
+        /// has a priority of <c>100</c>.
+        /// </para>
         /// </summary>
-        protected ProcessingState RequiredState { get; private set; }
-
-        /// <summary>
-        /// Gets the current <see cref="ProcessingState"/>.
-        /// </summary>
-        protected ProcessingState CurrentState { get; private set; }
-
-        /// <summary>
-        /// Create a new <see cref="BlurVisitor"/>.
-        /// </summary>
-        /// <param name="requiredState">
-        /// <see cref="ProcessingState"/> that must be matched to execute
-        /// this visitor.
-        /// </param>
-        protected BlurVisitor(ProcessingState requiredState)
-        {
-            this.RequiredState = requiredState;
-        }
+        public abstract int Priority { get; }
 
         /// <summary>
         /// Visit the given object.
         /// </summary>
-        internal void Visit(object obj, ProcessingState state)
+        internal void Visit(object obj)
         {
-            this.CurrentState = state;
-
-            if ((this.RequiredState & state) != state)
-                return;
-
             try
             {
                 if (obj is TypeDefinition)

@@ -133,7 +133,7 @@ namespace Blur
         /// added on the stack using the <see cref="Constant(object)"/>
         /// method.
         /// </summary>
-        public bool IsConstant(TypeDefinition type)
+        public static bool IsConstant(TypeDefinition type)
         {
 #if NET_CORE
             return System.Array.IndexOf(Enum.GetNames(typeof(TypeCode)), type.Name) != -1;
@@ -143,7 +143,7 @@ namespace Blur
         }
 
         /// <inheritdoc cref="IsConstant(TypeDefinition)"/>
-        public bool IsConstant(Type type)
+        public static bool IsConstant(Type type)
         {
 #if NS15
             switch (Type.GetTypeCode(type))
@@ -178,7 +178,7 @@ namespace Blur
         /// added on the stack using the <see cref="Constant(object)"/>
         /// method.
         /// </summary>
-        public bool IsConstant<T>() => this.IsConstant(typeof(T));
+        public static bool IsConstant<T>() => IsConstant(typeof(T));
 
 
         /// <summary>
@@ -377,8 +377,7 @@ namespace Blur
         /// </summary>
         public ILWriter Long(long value)
         {
-            this.Emit(OpCodes.Ldc_I8, value);
-            return this.Emit(OpCodes.Conv_I8);
+            return this.Emit(OpCodes.Ldc_I8, value);
         }
 
         /// <summary>

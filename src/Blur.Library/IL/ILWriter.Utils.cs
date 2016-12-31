@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil.Cil;
 
 namespace Blur
@@ -73,6 +69,82 @@ namespace Blur
             }
 
             return true;
+        }
+
+        private static Instruction InstructionFor(int i)
+        {
+            switch (i)
+            {
+                case -1:
+                    return Instruction.Create(OpCodes.Ldc_I4_M1);
+                case 0:
+                    return Instruction.Create(OpCodes.Ldc_I4_0);
+                case 1:
+                    return Instruction.Create(OpCodes.Ldc_I4_1);
+                case 2:
+                    return Instruction.Create(OpCodes.Ldc_I4_2);
+                case 3:
+                    return Instruction.Create(OpCodes.Ldc_I4_3);
+                case 4:
+                    return Instruction.Create(OpCodes.Ldc_I4_4);
+                case 5:
+                    return Instruction.Create(OpCodes.Ldc_I4_5);
+                case 6:
+                    return Instruction.Create(OpCodes.Ldc_I4_6);
+                case 7:
+                    return Instruction.Create(OpCodes.Ldc_I4_7);
+                case 8:
+                    return Instruction.Create(OpCodes.Ldc_I4_8);
+                default:
+                    return Instruction.Create(i > sbyte.MaxValue ? OpCodes.Ldc_I4 : OpCodes.Ldc_I4_S, i);
+            }
+        }
+
+        private static Instruction[] InstructionsFor(object obj)
+        {
+            if (obj == null)
+                return new[] { Instruction.Create(OpCodes.Ldnull) };
+
+            Type type = obj.GetType();
+            string ns = type.Namespace;
+
+            if (ns == "System")
+            {
+                // Constant
+                switch (type.Name)
+                {
+                    case nameof(Boolean):
+                        return new[] { Instruction.Create((bool)obj ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0) };
+                    case nameof(String):
+                        return new[] { Instruction.Create(OpCodes.Ldstr, (string)obj) };
+
+                    case nameof(Int16):
+                        return new[] { InstructionFor((int)obj), Instruction.Create(OpCodes.Conv_I2) };
+                    case nameof(Int32):
+                        return new[] { InstructionFor((int)obj) };
+                    case nameof(Int64):
+                        return new[] { Instruction.Create(OpCodes.Ldc_I8, (long)obj) };
+
+                    case nameof(UInt16):
+                        return new[] { InstructionFor((int)obj), Instruction.Create(OpCodes.Conv_U2) };
+                    case nameof(UInt32):
+                        return new[] { InstructionFor((int)obj), Instruction.Create(OpCodes.Conv_U4) };
+                    case nameof(UInt64):
+                        return new[] { Instruction.Create(OpCodes.Ldc_I8, (long)obj), Instruction.Create(OpCodes.Conv_U8) };
+                        
+                    case nameof(SByte):
+                        return new[] { InstructionFor((int)obj), Instruction.Create(OpCodes.Conv_I1) };
+                    case nameof(Byte):
+                        return new[] { InstructionFor((int)obj), Instruction.Create(OpCodes.Conv_U1) };
+
+                    case nameof(Double):
+                        return new[] { Instruction.Create(OpCodes.Ldc_R8, (double)obj) };
+                    case nameof(Single):
+                        return new[] { Instruction.Create(OpCodes.Ldc_R4, (float)obj) };
+                }
+            }
+
+            throw new NotSupportedException();
         }
     }
 }

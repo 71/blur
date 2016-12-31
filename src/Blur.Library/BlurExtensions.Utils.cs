@@ -166,11 +166,11 @@ namespace Blur
                 return Instruction.Create(opcode, (CallSite)operand);
 
             if (operand is MethodReference)
-                return Instruction.Create(opcode, (MethodReference)operand);
+                return Instruction.Create(opcode, Processor.TargetModuleDefinition.ImportReference((MethodReference)operand));
             if (operand is FieldReference)
-                return Instruction.Create(opcode, (FieldReference)operand);
+                return Instruction.Create(opcode, Processor.TargetModuleDefinition.ImportReference((FieldReference)operand));
             if (operand is TypeReference)
-                return Instruction.Create(opcode, (TypeReference)operand);
+                return Instruction.Create(opcode, Processor.TargetModuleDefinition.ImportReference((TypeReference)operand));
             if (operand is VariableDefinition)
                 return Instruction.Create(opcode, (VariableDefinition)operand);
             if (operand is ParameterDefinition)

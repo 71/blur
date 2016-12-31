@@ -1,0 +1,63 @@
+﻿#pragma warning disable 1574
+
+namespace Blur
+{
+    partial class ILWriter
+    {
+        /// <summary>
+        /// Emits the IL code of the given <paramref name="action"/> to the writer.
+        /// </summary>
+        public ILWriter Delegate(System.Action action) => this.Delegate(new object[0], action);
+
+        /// <summary>
+        /// Emits the IL code of the given <paramref name="func"/> to the writer.
+        /// </summary>
+        public ILWriter Delegate<TReturn>(System.Func<TReturn> func) => this.Delegate(new object[0], func);
+
+
+        <#
+        string genArgs    = "";
+        string delGenArgs = "";
+        string parameters = "";
+        string arguments  = "";
+
+        for (int i = 0; i < 26; i++)
+        {
+            string prefix = i == 0 ? "" : ", ";
+
+            genArgs     += prefix + 'T' + (char)(65 + i);
+            parameters  += prefix + 'T' + (char)(65 + i) + ' ' + (char)(97 + i);
+
+            delGenArgs  += prefix + "in T" + (char)(65 + i);
+            arguments   += prefix + (char)(97 + i);
+        #>
+
+        #region <#=genArgs#>
+        /// <summary>
+        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Delegate{<#=genArgs#>}"/>.
+        /// </summary>
+        public delegate void ILAction<<#=delGenArgs#>>(<#=parameters#>);
+
+        /// <summary>
+        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Delegate{<#=genArgs#>, TReturn}"/>.
+        /// </summary>
+        public delegate TReturn ILFunc<<#=delGenArgs#>, out TReturn>(<#=parameters#>);
+
+        /// <summary>
+        /// Emits the IL code of the given <paramref name="action"/> to the writer, passing
+        /// it the given arguments.
+        /// </summary>
+        public ILWriter Delegate<<#=genArgs#>>(<#=parameters#>, ILAction<<#=genArgs#>> action) => this.Delegate(new object[] { <#=arguments#> }, action);
+
+        /// <summary>
+        /// Emits the IL code of the given <paramref name="func"/> to the writer, passing
+        /// it the given arguments.
+        /// </summary>
+        public ILWriter Delegate<<#=genArgs#>, TReturn>(<#=parameters#>, ILFunc<<#=genArgs#>, TReturn> func) => this.Delegate(new object[] { <#=arguments#> }, func);
+        #endregion
+
+        <#
+        }
+        #>
+    }
+}

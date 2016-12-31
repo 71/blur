@@ -45,26 +45,7 @@ namespace Blur
         }
 
         #region Fix / From
-        private static void FixLdargFor(ParameterDefinition param, Instruction ins)
-        {
-            ins.Operand = null;
-
-            switch (param.Sequence)
-            {
-                case 0:
-                    ins.OpCode = OpCodes.Ldarg_0; break;
-                case 1:
-                    ins.OpCode = OpCodes.Ldarg_1; break;
-                case 2:
-                    ins.OpCode = OpCodes.Ldarg_2; break;
-                case 3:
-                    ins.OpCode = OpCodes.Ldarg_3; break;
-                default:
-                    ins.OpCode = param.Sequence > sbyte.MaxValue ? OpCodes.Ldarg : OpCodes.Ldarg_S;
-                    ins.Operand = param;
-                    break;
-            }
-        }
+        
 
         private static void FixLdlocFor(int i, Instruction ins)
         {
@@ -225,6 +206,7 @@ namespace Blur
         /// Insert the given <see cref="MethodBody"/> to this writer.
         /// </summary>
         /// <param name="body">The <see cref="MethodBody"/> to copy.</param>
+        [Obsolete("This method is planned to be remove, and support for it has ended. If it is important to you, please open a pull request stating it.")]
         public ILWriter Body(MethodBody body)
         {
             // Save current position to later fix offsets.
@@ -238,7 +220,7 @@ namespace Blur
 
             // Save variables locally for quick access.
             bool isTargetStatic = Method.IsStatic;
-            bool mustChange = isTargetStatic != body.Method.IsStatic;
+            bool mustChange = Method.HasThis != body.Method.HasThis;
             List<Tuple<int, Instruction>> insToPush = new List<Tuple<int, Instruction>>();
             List<Instruction> toRemove = new List<Instruction>();
 
@@ -333,51 +315,10 @@ namespace Blur
         }
 
         /// <summary>
-        /// Insert the IL body of an <see cref="Action"/> to this writer.
-        /// </summary>
-        /// <param name="action">The action whose body will be copied.</param>
-        /// <param name="removeRet">If <see langword="true"/>, all instructions with the <see cref="OpCodes.Ret"/> opcode will be removed.</param>
-        public ILWriter Body(Action action, bool removeRet = true)
-        {
-            int posBefore = position;
-
-            this.Body(action.GetMethodInfo().GetDefinition().Body);
-
-            if (removeRet)
-            {
-                for (int i = posBefore; i < position; i++)
-                {
-                    if (instructions[i].OpCode == OpCodes.Ret)
-                        this.instructions[i].OpCode = OpCodes.Nop;
-                }
-            }
-
-            return this;
-        }
-
-        /// <summary>
         /// Insert the IL body of a <paramref name="method"/> to this writer.
         /// </summary>
         /// <param name="method">The method whose body will be copied.</param>
+        [Obsolete("This method is planned to be remove, and support for it has ended. If it is important to you, please open a pull request stating it.")]
         public ILWriter Body(MethodInfo method) => this.Body(method.GetDefinition().Body);
-
-        /// <summary>
-        /// Insert the IL body of a <see langword="delegate"/> to this writer.
-        /// </summary>
-        /// <param name="del">The <see langword="delegate"/> whose body will be copied.</param>
-        public ILWriter Body(Delegate del) => this.Body(del.GetMethodInfo());
-
-        /// <summary>
-        /// Insert the IL body of a <see langword="delegate"/> of
-        /// type <typeparamref name="TDelegate"/> to this writer.
-        /// </summary>
-        /// <param name="del">The <see langword="delegate"/> whose body will be copied.</param>
-        public ILWriter Body<TDelegate>(TDelegate del)
-        {
-            Delegate deleg = del as Delegate;
-            if (deleg != null)
-                return this.Body(deleg);
-            throw new ArgumentException("Given object is not a delegate.", nameof(del));
-        }
     }
 }

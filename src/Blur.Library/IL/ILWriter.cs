@@ -22,6 +22,7 @@ namespace Blur
 
         internal readonly IList<Instruction> instructions;
         internal readonly IList<VariableDefinition> variables;
+        internal readonly IList<ParameterDefinition> parameters;
         internal int position;
 
         /// <summary>
@@ -74,6 +75,7 @@ namespace Blur
             this.Method = method;
             this.instructions = method.Body.Instructions;
             this.variables = method.Body.Variables;
+            this.parameters = method.Parameters;
 
             this.readOnlyInstructions =
                 new Lazy<ReadOnlyCollection<Instruction>>(() => new ReadOnlyCollection<Instruction>(instructions));

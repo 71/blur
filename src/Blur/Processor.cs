@@ -119,10 +119,23 @@ namespace Blur.Processing
             {
                 foreach (CustomAttributeNamedArgument namedArg in blurAttribute.NamedArguments)
                 {
+                    object value = namedArg.TypedValue.Value;
+
+                    IReadOnlyList<CustomAttributeTypedArgument> typedArgs = value as IReadOnlyList<CustomAttributeTypedArgument>;
+                    if (typedArgs != null)
+                    {
+                        Array array = (Array)Activator.CreateInstance(namedArg.TypedValue.ArgumentType, typedArgs.Count); 
+
+                        for (int i = 0; i < array.Length; i++)
+                            array.SetValue(typedArgs[i].Value, i);
+
+                        value = array;
+                    }
+
                     if (namedArg.IsField)
-                        attrType.GetField(namedArg.MemberName).SetValue(attrObj, namedArg.TypedValue.Value);
+                        attrType.GetField(namedArg.MemberName).SetValue(attrObj, value);
                     else
-                        attrType.GetProperty(namedArg.MemberName).SetValue(attrObj, namedArg.TypedValue.Value);
+                        attrType.GetProperty(namedArg.MemberName).SetValue(attrObj, value);
                 }
             }
 

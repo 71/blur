@@ -179,8 +179,8 @@ namespace Blur
 
             return method.DeclaringType.GetDefinition().Methods
                 .FirstOrDefault(x => x.Name == method.Name && x.Parameters.Count == parameters.Length
-                                  && x.Parameters.Select(y => y.ParameterType.FullName)
-                                      .SequenceEqual(parameters.Select(y => y.ParameterType.FullName)));
+                                  && x.Parameters.Select(y => y.ParameterType.Name)
+                                      .SequenceEqual(parameters.Select(y => y.ParameterType.Name)));
         }
 
         /// <summary>
@@ -236,6 +236,13 @@ namespace Blur
             TypeReference reference;
             if (Processor.TargetModuleDefinition.TryGetTypeReference(type.FullName, out reference))
                 return reference;
+
+            AssemblyName an = type.Assembly.GetName();
+            reference = new TypeReference(type.Namespace, type.Name, Processor.TargetModuleDefinition,
+                                     new AssemblyNameReference(an.FullName, an.Version));
+            if ((reference = reference.Resolve()) != null)
+                return reference;
+
             throw new Exception($"Cannot get Reference for {type.FullName}");
         }
 
@@ -245,17 +252,7 @@ namespace Blur
         /// </summary>
         public static TypeReference GetReference(this Type type)
         {
-            TypeReference reference;
-            if (Processor.TargetModuleDefinition.TryGetTypeReference(type.FullName, out reference))
-                return reference;
-
-            AssemblyName an = type.GetTypeInfo().Assembly.GetName();
-            reference = new TypeReference(type.Namespace, type.Name, Processor.TargetModuleDefinition,
-                                     new AssemblyNameReference(an.FullName, an.Version));
-            if ((reference = reference.Resolve()) != null)
-                return reference;
-
-            throw new Exception($"Cannot get Reference for {type.FullName}");
+            return type.GetTypeInfo().GetReference();
         }
 
         /// <summary>

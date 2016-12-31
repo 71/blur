@@ -41,7 +41,6 @@
     <Compile Include="..\..\items\AssemblyVersion.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="BlurAttribute.cs" />
-    <Compile Include="BlurExtensions.Convert.cs" />
     <Compile Include="BlurExtensions.cs" />
     <Compile Include="BlurExtensions.Emit.cs" />
     <Compile Include="BlurExtensions.Find.cs" />
@@ -54,6 +53,12 @@
     <Compile Include="IL\Context.cs" />
     <Compile Include="IL\ILWriter.Conditional.cs" />
     <Compile Include="IL\ILWriter.cs" />
+    <Compile Include="IL\ILWriter.Delegate.cs" />
+    <Compile Include="IL\ILWriter.Delegates.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ILWriter.Delegates.tt</DependentUpon>
+    </Compile>
     <Compile Include="IL\ILWriter.Emit.cs" />
     <Compile Include="IL\ILWriter.Expressions.cs" />
     <Compile Include="IL\ILWriter.Methods.cs" />
@@ -74,6 +79,10 @@
     <Compile Include="Weavers.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="IL\ILWriter.Delegates.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ILWriter.Delegates.cs</LastGenOutput>
+    </Content>
     <Content Include="IL\Instructions.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Instructions.g.cs</LastGenOutput>
