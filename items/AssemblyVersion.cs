@@ -4,5 +4,5 @@ using System.Reflection;
 [assembly: AssemblyProduct("Blur")]
 [assembly: AssemblyCopyright("Copyright © Grégoire GEIS 2016-2017")]
 
-[assembly: AssemblyVersion("0.1.2")]
-[assembly: AssemblyFileVersion("0.1.2")]
+[assembly: AssemblyVersion("0.2.0")]
+[assembly: AssemblyFileVersion("0.2.0")]

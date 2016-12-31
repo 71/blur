@@ -62,7 +62,7 @@
     <Compile Include="IL\ILWriter.Emit.cs" />
     <Compile Include="IL\ILWriter.Expressions.cs" />
     <Compile Include="IL\ILWriter.Methods.cs" />
-    <Compile Include="IL\ILWriter.Miscillaneous.cs" />
+    <Compile Include="IL\ILWriter.Miscellaneous.cs" />
     <Compile Include="IL\ILWriter.Move.cs" />
     <Compile Include="IL\ILWriter.Parse.cs" />
     <Compile Include="IL\ILWriter.Reposition.cs" />

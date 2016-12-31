@@ -5,6 +5,8 @@ using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
+// The code below will be deprecated shortly.
+
 namespace Blur
 {
     partial class ILWriter

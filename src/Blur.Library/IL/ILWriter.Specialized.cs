@@ -216,36 +216,7 @@ namespace Blur
         /// </summary>
         public ILWriter Constant(object arg)
         {
-            if (arg == null)
-                return this.Null();
-            if (arg is string)
-                return this.String((string)arg);
-            if (arg is bool)
-                return this.Boolean((bool)arg);
-            if (arg is byte)
-                return this.Byte((byte)arg);
-            if (arg is sbyte)
-                return this.SByte((sbyte)arg);
-            if (arg is int)
-                return this.Int((int)arg);
-            if (arg is uint)
-                return this.UInt((uint)arg);
-            if (arg is short)
-                return this.Short((short)arg);
-            if (arg is ushort)
-                return this.UShort((ushort)arg);
-            if (arg is long)
-                return this.Long((long)arg);
-            if (arg is ulong)
-                return this.ULong((ulong)arg);
-            if (arg is float)
-                return this.Single((float)arg);
-            if (arg is double)
-                return this.Double((double)arg);
-            if (arg is char)
-                return this.Char((char)arg);
-
-            throw new ArgumentException("Given value is not a constant.", nameof(arg));
+            return this.Emit(InstructionsFor(arg));
         }
 
         /// <summary>

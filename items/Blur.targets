@@ -18,14 +18,32 @@
     </PropertyGroup>
 
     
-    <!-- Processing -->
-    <Target Name="BlurWeaving" AfterTargets="AfterCompile">
+    <!-- Processing w/ CMD -->
+    <!--<Target Name="BlurWeaving" AfterTargets="AfterCompile">
         <Exec Command="$(BlurCommand) &quot;@(IntermediateAssembly)&quot; &quot;$(BlurTargetPath)&quot; &quot;@(ReferencePath)&quot;" />
     </Target>
 
     <Target Name="MoveFiles" DependsOnTargets="BlurWeaving"
             Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
         
+        <Copy SourceFiles="$(BlurTargetPath)"
+              DestinationFiles="@(IntermediateAssembly)"
+              OverwriteReadOnlyFiles="True" ContinueOnError="False" />
+        <Message Text="Blur successfully ran." />
+    </Target>-->
+
+    <!-- Processing w/ MSBuild -->
+    <UsingTask TaskName="Blur.Processing.BlurTask" AssemblyFile="$(BlurPath)" />
+    
+    <Target Name="BlurWeaving" AfterTargets="AfterCompile"
+            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
+        <Blur.Processing.BlurTask TargetAssembly="@(IntermediateAssembly)"
+                                  TargetPath="$(BlurTargetPath)"
+                                  TargetReferences="@(ReferencePath)" />
+    </Target>
+
+    <Target Name="MoveFiles" DependsOnTargets="BlurWeaving"
+            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
         <Copy SourceFiles="$(BlurTargetPath)"
               DestinationFiles="@(IntermediateAssembly)"
               OverwriteReadOnlyFiles="True" ContinueOnError="False" />

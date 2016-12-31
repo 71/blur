@@ -63,7 +63,7 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
         {
             // If the opcode of the instruction is "ret", ...
             // For those of you that are not familiar with IL, "ret" is
-            // the opcode that corresponds to "return".
+            // the opcode that corresponds to "return" the value at the top of the stack.
             if (ins.OpCode == OpCodes.Ret)
                 // ILWriter's fluent API chains calls together.
                 // The following expression will write the following IL code:
@@ -72,7 +72,7 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
                 // Not that Call() automatically inserts this if the method is
                 // an instance method, and uses Callvirt if needed.
                 writer
-                    .Before(ins)            // Position builder before the given instruction
+                    .Before(ins)            // Position writer before the given instruction
                     .Call(ReadLineMethod)   //  call string [mscorlib]System.Console::ReadLine()
                     .Pop();                 //  pop
         });
@@ -99,7 +99,7 @@ Currently compatible with:
 #### `ILWriter`
 The `ILWriter` class provides fluent methods meant to make editing
 IL easy. IL can be emitted:
-- Using delegates (via `ILWriter.Body(delegate)`).
+- Using delegates (via `ILWriter.Delegate(delegate)`).
 - Using LINQ Expressions (via `ILWriter.Expression(Expression)`).
 - Using a simplified emitter.
 - Using raw IL (via `ILWriter.Emit(OpCode, ...)` and `Blur.Extensions.ILWriterExtensions`).
