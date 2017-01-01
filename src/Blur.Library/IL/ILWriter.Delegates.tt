@@ -1,4 +1,5 @@
-﻿#pragma warning disable 1574
+﻿#pragma warning disable CS1574
+#pragma warning disable CS0419
 
 namespace Blur
 {

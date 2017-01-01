@@ -18,9 +18,9 @@ namespace Blur
     /// </summary>
     internal static class Processor
     {
-        public static Assembly Target                     { get; private set; }
+        public static Assembly Target { get; private set; }
         public static AssemblyDefinition TargetDefinition { get; private set; }
-        public static BlurAttribute Settings              { get; private set; }
+        public static BlurAttribute Settings { get; private set; }
 
         public static Module TargetModule { get; private set; }
         public static ModuleDefinition TargetModuleDefinition { get; private set; }
@@ -117,7 +117,7 @@ namespace Blur
 
             // Search this assembly.
             visitors.AddRange(FindVisitors(Target));
-            
+
             // Search referenced assemblies.
             foreach (Assembly assembly in GetAssemblies())
                 visitors.AddRange(FindVisitors(assembly));
@@ -141,14 +141,15 @@ namespace Blur
                 if (type.IsGenericType)
                     throw new NotSupportedException($"A {nameof(BlurVisitor)} cannot be generic.");
                 if (type.Name == nameof(AttributesVisitor)
-                 || type.Name == nameof(BlurVisitor)
-                 || (allowedVisitors != null && !allowedVisitors.Contains(type.Name)))
+                    || type.Name == nameof(BlurVisitor)
+                    || (allowedVisitors != null && !allowedVisitors.Contains(type.Name)))
                     continue;
 
                 ConstructorInfo visitorCtor = type.DeclaredConstructors.FirstOrDefault();
 
                 if (visitorCtor == null)
-                    throw new NotSupportedException($"A {nameof(BlurVisitor)} must declare a parameterless constructor.");
+                    throw new NotSupportedException(
+                        $"A {nameof(BlurVisitor)} must declare a parameterless constructor.");
 
                 yield return (BlurVisitor)visitorCtor.Invoke(new object[0]);
             }
@@ -221,8 +222,7 @@ namespace Blur
                 TypeDefinition type = types[i];
 
                 // Does this type inherit "IWeaver" or "BlurVisitor"?
-                if (type.Interfaces.Any(x => x.InterfaceType.FullName == $"{nameof(Blur)}.{nameof(IWeaver)}") ||
-                    type.IsMatch(x => x.FullName == $"{nameof(Blur)}.{nameof(BlurVisitor)}"))
+                if (type.Interfaces.Any(x => x.InterfaceType.Is<IWeaver>() || type.Is<BlurVisitor>()))
                     types.RemoveAt(i--);
             }
 

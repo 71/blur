@@ -10,27 +10,43 @@ namespace Blur
     /// Provides access to local members of a rewritten method.
     /// <para>
     /// Methods in this class should only be called in a <see langword="delegate"/>
-    /// passed to <see cref="ILWriter.Body(Delegate)"/>.
+    /// passed to <see cref="ILWriter.Delegate(Action)"/> and other overloads.
     /// </para>
     /// </summary>
     public static class Context
     {
         #region Classes
-
         internal interface IContextObj
         {
+            /// <summary>
+            /// Gets the type of the value that'll be returned.
+            /// </summary>
             Type ObjectType { get; }
+
+            /// <summary>
+            /// 
+            /// </summary>
             Instruction GetInstruction(ILWriter il);
         }
 
+        /// <summary>
+        /// Represents a local argument (or parameter).
+        /// </summary>
+        /// <typeparam name="T">The type of the argument.</typeparam>
         public struct ContextArgument<T> : IContextObj
         {
             internal int NthArgument;
             internal string ArgumentName;
+
+            /// <summary>
+            /// Returns the value of the argument.
+            /// </summary>
             public T Value;
 
+            /// <inheritdoc/> 
             public Type ObjectType => typeof(T);
 
+            /// <inheritdoc cref="Value"/> 
             public static implicit operator T(ContextArgument<T> obj) => obj.Value;
 
             internal ContextArgument(int nth)
@@ -54,6 +70,7 @@ namespace Blur
                 return this;
             }
 
+            /// <inheritdoc/> 
             public Instruction GetInstruction(ILWriter il)
             {
                 string name = ArgumentName;
@@ -68,13 +85,23 @@ namespace Blur
             }
         }
 
+        /// <summary>
+        /// Represents a local variable.
+        /// </summary>
+        /// <typeparam name="T">The type of the variable.</typeparam>
         public struct ContextVariable<T> : IContextObj
         {
             internal int NthVariable;
+
+            /// <summary>
+            /// Returns the value of the local variable.
+            /// </summary>
             public T Value;
 
+            /// <inheritdoc/> 
             public Type ObjectType => typeof(T);
 
+            /// <inheritdoc cref="Value"/>
             public static implicit operator T(ContextVariable<T> obj) => obj.Value;
 
             internal ContextVariable(int nth)
@@ -90,6 +117,7 @@ namespace Blur
                 return this;
             }
 
+            /// <inheritdoc/> 
             public Instruction GetInstruction(ILWriter il)
             {
                 switch (NthVariable)
@@ -108,12 +136,21 @@ namespace Blur
             }
         }
 
+        /// <summary>
+        /// Represents <see langword="this"/>.
+        /// </summary>
+        /// <typeparam name="T">The declaring type of the method in which the context is retrieved.</typeparam>
         public struct ContextThis<T> : IContextObj
         {
+            /// <summary>
+            /// Returns the value of the current object.
+            /// </summary>
             public T Value;
 
+            /// <inheritdoc/>
             public Type ObjectType => typeof(T);
 
+            /// <inheritdoc cref="Value"/>
             public static implicit operator T(ContextThis<T> obj) => obj.Value;
 
             internal ContextThis<T> Verify()
@@ -123,6 +160,7 @@ namespace Blur
                 return this;
             }
 
+            /// <inheritdoc/>
             public Instruction GetInstruction(ILWriter il)
             {
                 return Instruction.Create(OpCodes.Ldarg_0);

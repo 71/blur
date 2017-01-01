@@ -20,6 +20,10 @@ namespace Blur.Processing
 
         public override bool Execute()
         {
+#if DEBUG
+            System.Diagnostics.Debugger.Launch();
+#endif
+
             try
             {
                 AssemblyResolver.References = TargetReferences.Split(';');
@@ -33,11 +37,14 @@ namespace Blur.Processing
 
                 StringBuilder msg = new StringBuilder();
 
-                while (e != null)
+                while (true)
                 {
                     msg.AppendLine(e.Message);
                     msg.AppendLine(e.StackTrace);
                     msg.AppendLine();
+
+                    if (e.InnerException == null)
+                        break;
 
                     e = e.InnerException;
                 }

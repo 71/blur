@@ -8,8 +8,8 @@ If ($(Get-Location).Path.EndsWith("items"))
 MSBuild src\Blur\Blur.csproj /property:Configuration=Release>nul
 MSBuild src\Blur.Library\Blur.Library.csproj /property:Configuration=Release>nul
 
-DotNet build -o build\Core\netstandard1.3 -f netstandard1.3 -c Release src\Blur.Library\project.json
-DotNet build -o build\Core\netstandard1.5 -f netstandard1.5 -c Release src\Blur.Library\project.json
+DotNet build --no-incremental -o build\Core\netstandard1.3 -f netstandard1.3 -c Release src\Blur.Library\project.json
+DotNet build --no-incremental -o build\Core\netstandard1.5 -f netstandard1.5 -c Release src\Blur.Library\project.json
 
 # Start nuget pack
 # It crashes if invoked directly by PowerShell

@@ -7,23 +7,13 @@ namespace Blur
 {
     partial class BlurExtensions
     {
-        /// <summary>
-        /// Returns whether or not the given <see cref="IMetadataTokenProvider"/>
-        /// was created during runtime, and has not yet been compiled.
-        /// </summary>
-        public static bool IsNew(this IMetadataTokenProvider tokenProvider)
-            => tokenProvider.MetadataToken.RID == 0;
-
-#region Mono.Cecil => System.Reflection
+        #region Mono.Cecil => System.Reflection
         /// <summary>
         /// Load the <see cref="Type"/> associated with the given
         /// <see cref="TypeDefinition"/>.
         /// </summary>
         public static Type AsType(this TypeReference type)
         {
-            //if (type.IsNew())
-            //    throw new ArgumentException("The given type cannot be dynamically created.", nameof(type));
-
             // Check if type is nested.
             if (type.DeclaringType != null)
                 return type.AsTypeInfo().AsType();
@@ -130,9 +120,9 @@ namespace Blur
 
             throw new NotSupportedException();
         }
-#endregion
+        #endregion
 
-#region System.Reflection => Mono.Cecil
+        #region System.Reflection => Mono.Cecil
         /// <summary>
         /// Load the <see cref="TypeDefinition"/> associated with the given
         /// <see cref="TypeInfo"/>.

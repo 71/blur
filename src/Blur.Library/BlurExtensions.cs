@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Blur
 {
@@ -19,6 +20,16 @@ namespace Blur
         /// Return a new <see cref="ILWriter"/> for the given <paramref name="method"/>.
         /// </summary>
         public static ILWriter Rewrite(this MethodDefinition method) => new ILWriter(method, true);
+
+        /// <summary>
+        /// Return a new <see cref="ILWriter"/> for the given <paramref name="body"/>.
+        /// </summary>
+        public static ILWriter Write(this MethodBody body) => new ILWriter(body.Method, false);
+
+        /// <summary>
+        /// Return a new <see cref="ILWriter"/> for the given <paramref name="body"/>.
+        /// </summary>
+        public static ILWriter Rewrite(this MethodBody body) => new ILWriter(body.Method, true);
 
         /// <summary>
         /// Returns whether or not the given <paramref name="property"/> is static.

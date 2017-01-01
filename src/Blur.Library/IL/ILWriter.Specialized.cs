@@ -68,6 +68,11 @@ namespace Blur
             => property.IsStatic() ? this.Emit(OpCodes.Call, property.GetMethod) : this.This().Emit(OpCodes.Callvirt, property.GetMethod);
 
         /// <summary>
+        /// Load a <paramref name="method"/> reference to the stack.
+        /// </summary>
+        public ILWriter Load(MethodReference method) => this.Emit(OpCodes.Ldftn, method);
+
+        /// <summary>
         /// Save the value at the top of the stack
         /// to a <paramref name="field"/>.
         /// <para>

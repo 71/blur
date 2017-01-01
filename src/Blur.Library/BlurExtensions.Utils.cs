@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -33,39 +34,25 @@ namespace Blur
         /// inherits the type <typeparamref name="T"/>.
         /// </summary>
         public static bool Inherits<T>(this TypeDefinition type)
-        {
-            string toCompare = typeof(T).FullName;
-            return type.FullName == toCompare || type.IsMatch(x => x.FullName == toCompare);
-        }
+            => type.Inherits(typeof(T));
 
         /// <summary>
-        /// Returns whether or not <paramref name="self"/> inherits
-        /// <paramref name="typeDef"/>.
+        /// Returns whether or not <paramref name="self"/> inherits <paramref name="type"/>.
         /// </summary>
-        public static bool Inherits(this TypeReference self, TypeReference typeDef)
-        {
-            return self.Resolve().IsMatch(x => x == typeDef);
-        }
+        public static bool Inherits(this TypeReference self, Type type)
+            => self.FullName != type.GetReferenceName() && (self.Resolve()?.Is(type, true) ?? false);
 
         /// <summary>
-        /// Returns whether or not <paramref name="self"/> inherits
-        /// <paramref name="typeDef"/>.
+        /// Returns whether or not <paramref name="self"/> inherits <paramref name="typeRef"/>.
+        /// </summary>
+        public static bool Inherits(this TypeReference self, TypeReference typeRef)
+            => self != typeRef && (self.Resolve()?.Is(typeRef, true) ?? false);
+
+        /// <summary>
+        /// Returns whether or not <paramref name="self"/> inherits <paramref name="typeDef"/>.
         /// </summary>
         public static bool Inherits(this TypeDefinition self, TypeDefinition typeDef)
-        {
-            return self.IsMatch(x => x == typeDef);
-        }
-
-        /// <summary>
-        /// Returns whether or not <paramref name="self"/>'s base types
-        /// matches the given <paramref name="predicate"/>.
-        /// </summary>
-        public static bool IsMatch(this TypeDefinition self, Predicate<TypeReference> predicate)
-        {
-            return predicate(self)
-                || (self.BaseType != null
-                    && (predicate(self.BaseType) || self.BaseType.Resolve().IsMatch(predicate)));
-        }
+            => self != typeDef && self.Is(typeDef, true);
         #endregion
 
         #region CreateInstance
@@ -81,11 +68,11 @@ namespace Blur
 
             foreach (var field in attribute.Fields)
                 type.GetDeclaredField(field.Name)
-                    .SetValue(weaver, field.Argument.Value);
+                    .SetValue(weaver, field.Argument.GetValue());
 
             foreach (var property in attribute.Properties)
                 type.GetDeclaredProperty(property.Name)
-                    .SetValue(weaver, property.Argument.Value);
+                    .SetValue(weaver, property.Argument.GetValue());
 
             return weaver;
         }
@@ -127,6 +114,55 @@ namespace Blur
                 array[i] = converter(self[i]);
 
             return array;
+        }
+
+        /// <summary>
+        /// Convert <see cref="TypeReference.FullName"/> to <see cref="Type.FullName"/>
+        /// and return the converted name.
+        /// </summary>
+        public static string GetReflectionName(this TypeReference type)
+        {
+            if (!type.IsGenericInstance)
+                return type.FullName;
+
+            var genericInstance = (GenericInstanceType)type;
+            return
+                $"{genericInstance.Namespace}.{type.Name}[{string.Join(",", genericInstance.GenericArguments.Select(p => p.GetReflectionName()).ToArray())}]";
+        }
+
+        /// <summary>
+        /// Convert <see cref="Type.FullName"/> to <see cref="TypeReference.FullName"/>
+        /// and return the converted name.
+        /// </summary>
+        public static string GetReferenceName(this Type type)
+        {
+            return type.GenericTypeArguments.Length == 0
+                ? type.FullName
+                : $"{type.Namespace}.{type.Name}<{string.Join(",", type.GenericTypeArguments.Select(x => x.GetReferenceName()).ToArray())}>";
+        }
+
+        /// <summary>
+        /// Make a <see cref="GenericInstanceMethod"/>, given its <see cref="MethodReference"/>
+        /// and its generic arguments.
+        /// </summary>
+        public static GenericInstanceMethod MakeGenericMethod(this MethodReference method, params TypeReference[] genericArguments)
+        {
+            var result = new GenericInstanceMethod(method);
+            foreach (var argument in genericArguments)
+                result.GenericArguments.Add(argument);
+            return result;
+        }
+
+        /// <summary>
+        /// Make a <see cref="GenericInstanceType"/>, given its <see cref="TypeReference"/>
+        /// and its generic arguments.
+        /// </summary>
+        public static GenericInstanceType MakeGenericType(this TypeReference type, params TypeReference[] genericArguments)
+        {
+            var result = new GenericInstanceType(type);
+            foreach (var argument in genericArguments)
+                result.GenericArguments.Add(argument);
+            return result;
         }
         #endregion
 
@@ -221,6 +257,112 @@ namespace Blur
 
             return newParameter;
         }
+        #endregion
+
+        #region Attributes
+        /// <summary>
+        /// Returns a <see cref="CustomAttributeArgument"/>'s <see cref="object"/>
+        /// value.
+        /// </summary>
+        public static object GetValue(this CustomAttributeArgument arg)
+        {
+            CustomAttributeArgument[] arguments = arg.Value as CustomAttributeArgument[];
+
+            if (arguments != null)
+                return arguments.Select(GetValue).ToArray();
+
+            object value = arg.Value;
+            while (value is CustomAttributeArgument)
+                value = ((CustomAttributeArgument)value).Value;
+
+            return value;
+        }
+
+        /// <summary>
+        /// Returns all <see cref="CustomAttribute"/>s that match <typeparamref name="TAttr"/>.
+        /// </summary>
+        public static IEnumerable<CustomAttribute> GetAttributes<TAttr>(this IMemberDefinition def) where TAttr : Attribute
+            => def.CustomAttributes.Where(x => x.AttributeType.Is<TAttr>(true));
+
+        /// <summary>
+        /// Returns the first <see cref="CustomAttribute"/>s that matches <typeparamref name="TAttr"/>,
+        /// or <code>null</code>.
+        /// </summary>
+        public static CustomAttribute GetAttribute<TAttr>(this IMemberDefinition def) where TAttr : Attribute
+            => GetAttributes<TAttr>(def).FirstOrDefault();
+
+        /// <summary>
+        /// Returns all <see cref="CustomAttribute"/>s that match <typeparamref name="TAttr"/>.
+        /// </summary>
+        public static IEnumerable<CustomAttribute> GetAttributes<TAttr>(this AssemblyDefinition def) where TAttr : Attribute
+            => def.CustomAttributes.Where(x => x.AttributeType.Is<TAttr>(true));
+
+        /// <summary>
+        /// Returns the first <see cref="CustomAttribute"/>s that matches <typeparamref name="TAttr"/>,
+        /// or <code>null</code>.
+        /// </summary>
+        public static CustomAttribute GetAttribute<TAttr>(this AssemblyDefinition def) where TAttr : Attribute
+            => GetAttributes<TAttr>(def).FirstOrDefault();
+
+        /// <summary>
+        /// Returns all <see cref="CustomAttribute"/>s that match <typeparamref name="TAttr"/>.
+        /// </summary>
+        public static IEnumerable<CustomAttribute> GetAttributes<TAttr>(this ParameterDefinition def) where TAttr : Attribute
+            => def.CustomAttributes.Where(x => x.AttributeType.Is<TAttr>(true));
+
+        /// <summary>
+        /// Returns the first <see cref="CustomAttribute"/>s that matches <typeparamref name="TAttr"/>,
+        /// or <code>null</code>.
+        /// </summary>
+        public static CustomAttribute GetAttribute<TAttr>(this ParameterDefinition def) where TAttr : Attribute
+            => GetAttributes<TAttr>(def).FirstOrDefault();
+        #endregion
+
+        #region Compare
+        /// <summary>
+        /// Returns whether or not <paramref name="typeRef"/> is or inherits <paramref name="type"/>.
+        /// </summary>
+        public static bool Is(this TypeReference typeRef, Type type, bool acceptDerivedTypes = true)
+        {
+            TypeDefinition def;
+            return typeRef.FullName == type.FullName ||
+                (acceptDerivedTypes && (def = typeRef.Resolve())?.BaseType != null && def.BaseType.Is(type, true));
+        }
+
+        /// <inheritdoc cref="Is(TypeReference, Type, bool)"/>
+        public static bool Is(this TypeReference typeRef, TypeReference type, bool acceptDerivedTypes = true)
+        {
+            TypeDefinition def;
+            return typeRef.FullName == type.FullName ||
+                (acceptDerivedTypes && (def = typeRef.Resolve())?.BaseType != null && def.BaseType.Is(type, true));
+        }
+
+        /// <summary>
+        /// Returns whether or not <paramref name="typeRef"/> is or inherits <typeparamref name="T"/>.
+        /// </summary>
+        public static bool Is<T>(this TypeReference typeRef, bool acceptDerivedTypes = true) => Is(typeRef, typeof(T), acceptDerivedTypes);
+
+        /// <summary>
+        /// Returns whether or not <paramref name="typeRef"/> is or inherits <paramref name="type"/>.
+        /// </summary>
+        public static bool Is(this Type type, TypeReference typeRef, bool acceptDerivedTypes = true) => Is(typeRef, type, acceptDerivedTypes);
+
+        /// <summary>
+        /// Returns whether or not <paramref name="methodRef"/> is or inherits <paramref name="method"/>.
+        /// </summary>
+        public static bool Is(this MethodReference methodRef, MethodInfo method)
+            => methodRef.Name == method.Name && methodRef.DeclaringType.Is(method.DeclaringType)
+            && methodRef.Parameters.Select(x => x.ParameterType.AsType()).SequenceEqual(method.GetParameters().Select(x => x.ParameterType));
+
+        /// <summary>
+        /// Returns whether or not <paramref name="propRef"/> is or inherits <paramref name="prop"/>.
+        /// </summary>
+        public static bool Is(this PropertyReference propRef, PropertyInfo prop) => propRef.Name == prop.Name && propRef.DeclaringType.Is(prop.DeclaringType);
+
+        /// <summary>
+        /// Returns whether or not <paramref name="fieldRef"/> is or inherits <paramref name="field"/>.
+        /// </summary>
+        public static bool Is(this FieldReference fieldRef, FieldInfo field) => fieldRef.Name == field.Name && fieldRef.DeclaringType.Is(field.DeclaringType);
         #endregion
     }
 }

@@ -23,7 +23,7 @@ namespace Blur.Processing
         private const string PROCESSOR_GETASSEMBLY   = "GetAssembly";
         private const string PROCESSOR_GETASSEMBLYSTREAM = "GetAssemblyStream";
 
-        private static Dictionary<string, byte[]> assembliesBytes = new Dictionary<string, byte[]>();
+        private static string AssemblyDirectory;
         private static string AssemblyPath;
         private static Assembly Assembly;
 
@@ -36,6 +36,7 @@ namespace Blur.Processing
         public static void Process(string assemblyPath, string copyPath = null)
         {
             AssemblyPath = assemblyPath;
+            AssemblyDirectory = Path.GetDirectoryName(assemblyPath);
 
             // Copy file to modify it later.
             if (copyPath == null)
@@ -81,12 +82,7 @@ namespace Blur.Processing
 #else
         private static Assembly ResolvingAssembly(object sender, ResolveEventArgs e)
         {
-            string assemblyDirectory = (sender as AppDomain)?.BaseDirectory ?? Path.GetDirectoryName(AssemblyPath);
-
-            if (assemblyDirectory == null)
-                return null;
-
-            string assemblyPath = Path.Combine(assemblyDirectory, e.Name.Substring(0, e.Name.IndexOf(',')) + ".dll");
+            string assemblyPath = Path.Combine(AssemblyDirectory, e.Name.Substring(0, e.Name.IndexOf(',')) + ".dll");
 
             if (File.Exists(assemblyPath))
                 return Assembly.LoadFrom(assemblyPath);
@@ -105,7 +101,7 @@ namespace Blur.Processing
                 Assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == ATTRIBUTE_FULLNAME);
 
             if (blurAttribute == null)
-                throw new ArgumentException("The given assembly must be marked with the Blur attribute.", nameof(Assembly));
+                throw new ArgumentException("The given assembly must be marked with the Blur attribute.");
 
             // Make the Blur attribute out of its data.
             object[] args = new object[blurAttribute.ConstructorArguments.Count];

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using Mono.Cecil;
 
 namespace Blur
@@ -23,6 +24,10 @@ namespace Blur
         /// <inheritdoc/>
         public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters)
         {
+            // Fix bad formatting of the fullname
+            Match m = Regex.Match(fullName, @"^(.+?),(.+?),(.+?),(.+?)(?=,)");
+            fullName = m.Success ? m.Value : fullName;
+
             AssemblyDefinition assembly;
             if (assembliesResolved.TryGetValue(fullName, out assembly))
                 return assembly;

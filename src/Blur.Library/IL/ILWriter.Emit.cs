@@ -144,13 +144,13 @@ namespace Blur
         public ILWriter Emit(OpCode opcode, double operand) => this.Emit(Instruction.Create(opcode, operand));
 
         #region Converted
-        /// <inheritdoc cref="Emit(OpCode, TypeDefinition)"/>
+        /// <inheritdoc cref="Emit(OpCode, TypeReference)"/>
         public ILWriter Emit(OpCode opcode, Type operand) => this.Emit(opcode, operand.GetReference());
 
-        /// <inheritdoc cref="Emit(OpCode, MethodDefinition)"/>
+        /// <inheritdoc cref="Emit(OpCode, MethodReference)"/>
         public ILWriter Emit(OpCode opcode, MethodInfo operand) => this.Emit(opcode, operand.GetReference());
 
-        /// <inheritdoc cref="Emit(OpCode, FieldDefinition)"/>
+        /// <inheritdoc cref="Emit(OpCode, FieldReference)"/>
         public ILWriter Emit(OpCode opcode, FieldInfo operand) => this.Emit(opcode, operand.GetReference());
 
         /// <inheritdoc cref="Emit(OpCode, ParameterDefinition)"/>
