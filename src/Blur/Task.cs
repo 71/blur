@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -18,17 +19,32 @@ namespace Blur.Processing
         [Required]
         public string TargetPath { get; set; }
 
+        public bool Preprocess { get; set; }
+
         public override bool Execute()
         {
 #if DEBUG
-            System.Diagnostics.Debugger.Launch();
+            Debugger.Launch();
 #endif
+
+            if (Preprocess)
+            {
+                Process process = Process.Start(Assembly.GetExecutingAssembly().Location, $"-p \"{TargetAssembly}\" \"{TargetAssembly}.pre\" \"{TargetReferences}\"");
+
+                process.WaitForExit();
+
+                if (process.ExitCode != 0)
+                    return false;
+            }
 
             try
             {
                 AssemblyResolver.References = TargetReferences.Split(';');
 
-                Processor.Process(Path.GetFullPath(TargetAssembly), TargetPath);
+                Processor.MessageLogged += Processor_MessageLogged;
+                Processor.WarningLogged += Processor_WarningLogged;
+
+                Processor.Process(Path.GetFullPath(TargetAssembly) + ".pre", TargetPath);
             }
             catch (Exception e)
             {
@@ -59,6 +75,16 @@ namespace Blur.Processing
             }
 
             return true;
+        }
+
+        private void Processor_WarningLogged(string obj)
+        {
+            BuildEngine.LogWarningEvent(new BuildWarningEventArgs("Warning", "", "", 0, 0, 0, 0, obj, "", ""));
+        }
+
+        private void Processor_MessageLogged(string obj)
+        {
+            BuildEngine.LogMessageEvent(new BuildMessageEventArgs(obj, "", "", MessageImportance.Normal));
         }
     }
 }

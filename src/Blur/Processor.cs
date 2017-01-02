@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
 
 #if NET_CORE
 using System.Runtime.Loader;
@@ -21,11 +22,16 @@ namespace Blur.Processing
         private const string PROCESSOR_METHOD        = "Process";
         private const string PROCESSOR_GETASSEMBLIES = "GetAssemblies";
         private const string PROCESSOR_GETASSEMBLY   = "GetAssembly";
+        private const string PROCESSOR_LOGMESSAGE    = "LogMessage";
+        private const string PROCESSOR_PREPROCESS    = "Preprocess";
         private const string PROCESSOR_GETASSEMBLYSTREAM = "GetAssemblyStream";
 
         private static string AssemblyDirectory;
         private static string AssemblyPath;
         private static Assembly Assembly;
+
+        public static event Action<string> MessageLogged;
+        public static event Action<string> WarningLogged;
 
         /// <summary>
         /// Process the <see cref="Assembly"/> at the given path.
@@ -92,18 +98,10 @@ namespace Blur.Processing
 #endif
 
         /// <summary>
-        /// Process <see cref="Assembly"/>.
+        /// Create a BlurAttribute, given its custom attribute data.
         /// </summary>
-        private static void ProcessAssembly(string copyPath)
+        private static object CreateAttribute(CustomAttributeData blurAttribute)
         {
-            // Get the BlurAttribute set on the assembly.
-            CustomAttributeData blurAttribute =
-                Assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == ATTRIBUTE_FULLNAME);
-
-            if (blurAttribute == null)
-                throw new ArgumentException("The given assembly must be marked with the Blur attribute.");
-
-            // Make the Blur attribute out of its data.
             object[] args = new object[blurAttribute.ConstructorArguments.Count];
             for (int i = 0; i < args.Length; i++)
                 args[i] = blurAttribute.ConstructorArguments[i].Value;
@@ -120,7 +118,7 @@ namespace Blur.Processing
                     IReadOnlyList<CustomAttributeTypedArgument> typedArgs = value as IReadOnlyList<CustomAttributeTypedArgument>;
                     if (typedArgs != null)
                     {
-                        Array array = (Array)Activator.CreateInstance(namedArg.TypedValue.ArgumentType, typedArgs.Count); 
+                        Array array = (Array)Activator.CreateInstance(namedArg.TypedValue.ArgumentType, typedArgs.Count);
 
                         for (int i = 0; i < array.Length; i++)
                             array.SetValue(typedArgs[i].Value, i);
@@ -135,10 +133,58 @@ namespace Blur.Processing
                 }
             }
 
+            return attrObj;
+        }
+
+
+        /// <summary>
+        /// Preprocess the target assembly.
+        /// </summary>
+        public static void Preprocess(string assemblyPath, string copyPath = null)
+        {
+            AssemblyPath = assemblyPath;
+            AssemblyDirectory = Path.GetDirectoryName(assemblyPath);
+
+            if (copyPath == null)
+                copyPath = Path.GetTempFileName();
+
+            File.Copy(assemblyPath, copyPath, true);
+
+            AppDomain.CurrentDomain.AssemblyResolve += ResolvingAssembly;
+
+            Assembly target = Assembly.LoadFrom(assemblyPath);
+
+            CustomAttributeData blurAttribute =
+                target.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == ATTRIBUTE_FULLNAME);
+
+            if (blurAttribute == null)
+                throw new ArgumentException("The given assembly must be marked with the Blur attribute.");
+
+            blurAttribute.AttributeType.Assembly
+                         .GetType(PROCESSOR_FULLNAME)
+                         .GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
+                         .Invoke(null, new object[] { File.Open(copyPath, FileMode.Open) });
+        }
+
+        /// <summary>
+        /// Process the target assembly.
+        /// </summary>
+        private static void ProcessAssembly(string copyPath)
+        {
+            // Get the BlurAttribute set on the assembly.
+            CustomAttributeData blurAttribute =
+                Assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == ATTRIBUTE_FULLNAME);
+
+            if (blurAttribute == null)
+                throw new ArgumentException("The given assembly must be marked with the Blur attribute.");
+
+            // Make the Blur attribute out of its data.
+            object attrObj = CreateAttribute(blurAttribute);
+
             // Retrieve the BlurAttribute's TypeInfo, to access its declaring Assembly.
             TypeInfo attributeType = blurAttribute.AttributeType.GetTypeInfo();
 
-            // Set the processor's GetAssemblies function.
+            // Set the processor's "tunnel" functions.
             Func<Assembly[]> getAssemblies = AppDomain.CurrentDomain.GetAssemblies;
             Func<string, Assembly> getAssembly = assemblyName
                 => AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName)
@@ -165,9 +211,16 @@ namespace Blur.Processing
             processor.GetField(PROCESSOR_GETASSEMBLIES).SetValue(null, getAssemblies);
             processor.GetField(PROCESSOR_GETASSEMBLY).SetValue(null, getAssembly);
             processor.GetField(PROCESSOR_GETASSEMBLYSTREAM).SetValue(null, getAssemblyStream);
+            processor.GetField(PROCESSOR_LOGMESSAGE).SetValue(null, new Action<string, bool>((msg, isWarning) =>
+            {
+                if (isWarning)
+                    WarningLogged?.Invoke(msg);
+                else
+                    MessageLogged?.Invoke(msg);
+            }));
 
             // Call Processor.Process();
-            processor.GetMethod(PROCESSOR_METHOD, new[] { typeof(string), typeof(Assembly), attrType, typeof(Stream) })
+            processor.GetMethod(PROCESSOR_METHOD, new[] { typeof(string), typeof(Assembly), attrObj.GetType(), typeof(Stream) })
                      .Invoke(null, new[] { copyPath, Assembly, attrObj, File.Open(copyPath, FileMode.Open) });
         }
     }

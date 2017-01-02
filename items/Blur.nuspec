@@ -3,7 +3,7 @@
     <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
         <id>Blur</id>
         <title>Blur</title>
-        <version>0.2.3-beta</version>
+        <version>0.2.4-beta</version>
         <authors>Jee</authors>
         <owners>Jee</owners>
         <licenseUrl>http://opensource.org/licenses/mit-license.php</licenseUrl>
@@ -20,12 +20,7 @@
         <copyright>Copyright (C) Grégoire GEIS 2016-2017</copyright>
         <tags>mono cecil il weaving weave assembly reflection injection blur</tags>
         <releaseNotes>
-            - Added ILWriter.Delegate().
-            - Fixed some typos.
-            - Blur now uses MSBuild.
-            - Fixed nuspec file.
-            - Updated dependencies.
-            - Added some utils.
+            - Added pre-processing abilities to Blur.
         </releaseNotes>
         
         <dependencies>

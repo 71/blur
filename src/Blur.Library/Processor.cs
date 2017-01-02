@@ -11,12 +11,11 @@ using System.Linq;
 
 namespace Blur
 {
-
     /// <summary>
     /// Defines the inner Blur processor. This class will
     /// edit an <see cref="Assembly"/> in which it is loaded.
     /// </summary>
-    internal static class Processor
+    internal static partial class Processor
     {
         public static Assembly Target { get; private set; }
         public static AssemblyDefinition TargetDefinition { get; private set; }
@@ -29,6 +28,8 @@ namespace Blur
         public static Func<Assembly[]> GetAssemblies;
         public static Func<string, Assembly> GetAssembly;
         public static Func<string, Stream> GetAssemblyStream;
+
+        public static Action<string, bool> LogMessage;
 #pragma warning restore CS0649
 
         /// <summary>
@@ -54,7 +55,8 @@ namespace Blur
                     AssemblyResolver = new AssemblyResolver()
                 });
                 TargetModuleDefinition = TargetDefinition.MainModule;
-                TargetModule = Target.Modules.First(x => x.Name == TargetModuleDefinition.Name);
+                TargetModule = Target.Modules.FirstOrDefault(x => x.Name == TargetModuleDefinition.Name)
+                               ?? Target.Modules.First();
 
                 // Load all referenced assemblies.
                 // Some assemblies are lazily loaded. We don't want that.

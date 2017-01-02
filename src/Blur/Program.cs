@@ -15,9 +15,19 @@ namespace Blur.Processing
         /// </summary>
         public static int Main(string[] args)
         {
+            bool willPreprocess = Array.IndexOf(args, "-p") == 0;
+
+            if (willPreprocess)
+            {
+                string[] tmp = new string[args.Length - 1];
+                Array.Copy(args, 1, tmp, 0, tmp.Length);
+                args = tmp;
+            }
+
             if (args.Length == 0 || args.Length > 3)
             {
-                Console.WriteLine("Usage: blur.exe [target] [save] [references]");
+                Console.WriteLine("Usage: blur.exe [-p] [target] [save] [references]");
+                Console.WriteLine(" - p:        Preprocess the assembly.");
                 Console.WriteLine(" - target:     Path to the assembly to process.");
                 Console.WriteLine(" - save:       Path to the file that'll be created.");
                 Console.WriteLine(" - references: Semicolon-separated list containing");
@@ -35,7 +45,10 @@ namespace Blur.Processing
                 if (args.Length == 3)
                     AssemblyResolver.References = args[2].Split(';');
 
-                Processor.Process(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
+                if (willPreprocess)
+                    Processor.Preprocess(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
+                else
+                    Processor.Process(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
             }
             catch (Exception e)
             {

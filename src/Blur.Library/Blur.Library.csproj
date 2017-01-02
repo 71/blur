@@ -40,6 +40,7 @@
   <ItemGroup>
     <Compile Include="..\..\items\AssemblyVersion.cs" />
     <Compile Include="AssemblyResolver.cs" />
+    <Compile Include="Blur.cs" />
     <Compile Include="BlurAttribute.cs" />
     <Compile Include="BlurExtensions.cs" />
     <Compile Include="BlurExtensions.Emit.cs" />
@@ -74,6 +75,7 @@
       <DependentUpon>Instructions.tt</DependentUpon>
     </Compile>
     <Compile Include="Mixin.cs" />
+    <Compile Include="Processor.Pre.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Weavers.cs" />

@@ -9,6 +9,31 @@ namespace Blur
 {
     partial class BlurExtensions
     {
+        /// <summary>
+        /// Returns whether or not the given <paramref name="method"/>
+        /// is <see langword="extern"/>.
+        /// </summary>
+        /// <remarks>
+        /// This method checks if <see cref="MethodDefinition.RVA"/> is 0,
+        /// and if it wasn't previously marked by Blur has an external method.
+        /// </remarks>
+        public static bool IsExtern(this MethodDefinition method)
+        {
+            if (method.RVA == 0)
+                return true;
+
+            if (!method.HasBody || method.Body.Instructions.Count != 2)
+                return false;
+
+            Instruction firstIns = method.Body.Instructions[0];
+            TypeReference operand = firstIns.Operand as TypeReference;
+
+            if (operand != null && operand.Name == nameof(ExternalMethodException))
+                return true;
+
+            return false;
+        }
+
         #region IsMatch
         /// <summary>
         /// Returns whether or not the given <paramref name="type"/>

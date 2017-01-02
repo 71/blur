@@ -4,6 +4,7 @@
     <!-- Properties -->
     <PropertyGroup>
         <BlurTargetPath>@(IntermediateAssembly->'%(FullPath).temp')</BlurTargetPath>
+        <BlurPreTargetPath>@(IntermediateAssembly->'%(FullPath).pre.temp')</BlurPreTargetPath>
         <BlurFilename>Blur.exe</BlurFilename>
     </PropertyGroup>
     
@@ -17,33 +18,27 @@
         <BlurCommand>mono "$(BlurPath)"</BlurCommand>
     </PropertyGroup>
 
-    
-    <!-- Processing w/ CMD -->
-    <!--<Target Name="BlurWeaving" AfterTargets="AfterCompile">
-        <Exec Command="$(BlurCommand) &quot;@(IntermediateAssembly)&quot; &quot;$(BlurTargetPath)&quot; &quot;@(ReferencePath)&quot;" />
-    </Target>
-
-    <Target Name="MoveFiles" DependsOnTargets="BlurWeaving"
-            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
-        
-        <Copy SourceFiles="$(BlurTargetPath)"
-              DestinationFiles="@(IntermediateAssembly)"
-              OverwriteReadOnlyFiles="True" ContinueOnError="False" />
-        <Message Text="Blur successfully ran." />
-    </Target>-->
-
-    <!-- Processing w/ MSBuild -->
+    <!-- Processing -->
     <UsingTask TaskName="Blur.Processing.BlurTask" AssemblyFile="$(BlurPath)" />
+
+    <!--<Target Name="BlurPreprocessing" AfterTargets="AfterCompile"
+            Inputs="@(IntermediateAssembly)" Outputs="$(BlurPreTargetPath)">
+        <Blur.Processing.BlurTask TargetAssembly="@(IntermediateAssembly)"
+                                  TargetPath="$(BlurPreTargetPath)"
+                                  TargetReferences="@(ReferencePath)"
+                                  Preprocess="True" />
+    </Target>-->
     
-    <Target Name="BlurWeaving" AfterTargets="AfterCompile"
-            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
+    <Target Name="BlurProcessing" AfterTargets="AfterCompile"
+            Inputs="@(IntermediateAssembly)" Outputs="$(BlurTargetPath)">       
         <Blur.Processing.BlurTask TargetAssembly="@(IntermediateAssembly)"
                                   TargetPath="$(BlurTargetPath)"
-                                  TargetReferences="@(ReferencePath)" />
+                                  TargetReferences="@(ReferencePath)"
+                                  Preprocess="True" />
     </Target>
 
-    <Target Name="MoveFiles" DependsOnTargets="BlurWeaving"
-            Inputs="@(IntermediateAssembly)" Outputs="$(TargetPath)">
+    <Target Name="MoveFiles" AfterTargets="BlurProcessing"
+            Inputs="$(BlurTargetPath)" Outputs="@(IntermediateAssembly)">
         <Copy SourceFiles="$(BlurTargetPath)"
               DestinationFiles="@(IntermediateAssembly)"
               OverwriteReadOnlyFiles="True" ContinueOnError="False" />
