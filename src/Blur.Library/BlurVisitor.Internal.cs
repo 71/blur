@@ -25,16 +25,6 @@ namespace Blur
 
         #region Utils
         /// <summary>
-        /// Returns whether or not the specified <paramref name="type"/>
-        /// implements the given interface <typeparamref name="T"/>.
-        /// </summary>
-        private static bool IsWeaver<T>(TypeReference type)
-        {
-            TypeDefinition typeDef = type.Resolve();
-            return typeDef != null && typeDef.Interfaces.Any(x => x.InterfaceType.FullName == typeof(T).FullName);
-        }
-
-        /// <summary>
         /// Visits all the given <paramref name="attributes"/>.
         /// If an attribute is a <typeparamref name="TWeaver"/>, <paramref name="callback"/>
         /// will be called with it.
@@ -47,7 +37,9 @@ namespace Blur
             {
                 CustomAttribute attr = attributes[i];
 
-                if (!IsWeaver<TWeaver>(attr.AttributeType))
+                Blur.Log($"Visiting {attr.AttributeType}");
+
+                if (!attr.AttributeType.Resolve().Implements<IWeaver>())
                     continue;
 
                 callback(attr.CreateInstance<TWeaver>());

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
 
 #if NET_CORE
 using System.Runtime.Loader;
@@ -17,30 +16,53 @@ namespace Blur.Processing
     /// </summary>
     public static class Processor
     {
-        private const string ATTRIBUTE_FULLNAME      = "Blur.BlurAttribute";
-        private const string PROCESSOR_FULLNAME      = "Blur.Processor";
-        private const string PROCESSOR_METHOD        = "Process";
+        #region Fields & Constructor
+        private const string ATTRIBUTE_FULLNAME = "Blur.BlurAttribute";
+        private const string PROCESSOR_FULLNAME = "Blur.Processor";
+        private const string PROCESSOR_METHOD = "Process";
         private const string PROCESSOR_GETASSEMBLIES = "GetAssemblies";
-        private const string PROCESSOR_GETASSEMBLY   = "GetAssembly";
-        private const string PROCESSOR_LOGMESSAGE    = "LogMessage";
-        private const string PROCESSOR_PREPROCESS    = "Preprocess";
+        private const string PROCESSOR_GETASSEMBLY = "GetAssembly";
+        private const string PROCESSOR_LOGMESSAGE = "LogMessage";
+        private const string PROCESSOR_PREPROCESS = "Preprocess";
         private const string PROCESSOR_GETASSEMBLYSTREAM = "GetAssemblyStream";
 
+        private static bool WillSave = true;
+        private static bool HasBeenInitialized;
         private static string AssemblyDirectory;
         private static string AssemblyPath;
+
+        private static Stream TargetStream;
+        private static string TargetPath;
+
         private static Assembly Assembly;
+        private static Assembly BlurLibrary;
 
         public static event Action<string> MessageLogged;
         public static event Action<string> WarningLogged;
 
+        static Processor()
+        {
+#if NET_CORE
+            // Handle case where Blur.Library can't be found.
+            AssemblyLoadContext.Default.Resolving += ResolvingAssembly;
+#else
+            // Handle case where Blur.Library can't be found.
+            AppDomain.CurrentDomain.AssemblyResolve += ResolvingAssembly;
+#endif
+        }
+        #endregion
+
+        #region Public methods
         /// <summary>
-        /// Process the <see cref="Assembly"/> at the given path.
+        /// Initialize the <see cref="Processor"/>, given the file that it'll modify.
         /// </summary>
         /// <param name="assemblyPath">Path of the assembly to process.</param>
         /// <param name="copyPath">Path of the shadow copy of the assembly to process. If <see langword="null"/>, a temporary file will be used instead.</param>
-        /// <inheritdoc cref="FileStream(string, FileMode, FileAccess)" select="exception"/>
-        public static void Process(string assemblyPath, string copyPath = null)
+        public static void Initialize(string assemblyPath, string copyPath = null)
         {
+            HasBeenInitialized = true;
+
+            TargetPath = copyPath;
             AssemblyPath = assemblyPath;
             AssemblyDirectory = Path.GetDirectoryName(assemblyPath);
 
@@ -50,28 +72,86 @@ namespace Blur.Processing
 
             File.Copy(assemblyPath, copyPath, true);
 
-#if NET_CORE
-            // Open assembly.
-            using (FileStream assemblyStream = new FileStream(assemblyPath, FileMode.Open, FileAccess.ReadWrite))
+            // Load Blur.Library first.
+            if (AssemblyResolver.References != null)
             {
-                // Load the assembly.
-                Assembly = AssemblyLoadContext.Default.LoadFromStream(assemblyStream);
+                string blurLibraryPath = AssemblyResolver.References.FirstOrDefault(x => x.EndsWith("Blur.Library.dll", StringComparison.OrdinalIgnoreCase));
 
-                // Handle case where Blur.Library can't be found.
-                AssemblyLoadContext.Default.Resolving += ResolvingAssembly;
+                if (blurLibraryPath != null)
+                    BlurLibrary = Assembly.LoadFrom(blurLibraryPath);
             }
-#else
-            // Load the assembly.
-            Assembly = Assembly.LoadFrom(assemblyPath);
 
-            // Handle case where Blur.Library can't be found.
-            AppDomain.CurrentDomain.AssemblyResolve += ResolvingAssembly;
-#endif
+            if (BlurLibrary == null)
+                BlurLibrary = Assembly.Load(new AssemblyName("Blur.Library"));
 
-            // Finally, process the assembly.
-            ProcessAssembly(copyPath);
+            // Load the assembly to modify.
+            TargetStream = File.Open(copyPath, FileMode.Open, FileAccess.ReadWrite);
         }
 
+        /// <summary>
+        /// Dispose the Processor, saving its content.
+        /// </summary>
+        public static void Dispose()
+        {
+            if (!WillSave)
+                return;
+
+            TargetStream.Dispose();
+        }
+
+        /// <summary>
+        /// Cancel the operation, discarding changes.
+        /// </summary>
+        public static void Cancel()
+        {
+            WillSave = false;
+
+            Dispose();
+        }
+
+        /// <summary>
+        /// Process the <see cref="Assembly"/> at the given path.
+        /// </summary>
+        /// <inheritdoc cref="FileStream(string, FileMode, FileAccess)" select="exception"/>
+        public static void Process()
+        {
+            if (!HasBeenInitialized)
+                throw new Exception("Please initialize the processor before calling Process.");
+
+            // Load the assembly.
+#if NET_CORE
+            Assembly = AssemblyLoadContext.Default.LoadFromStream(assemblyStream);
+#else
+            byte[] assemblyBytes = new byte[TargetStream.Length];
+
+            TargetStream.Position = 0;
+            TargetStream.Read(assemblyBytes, 0, assemblyBytes.Length);
+
+            Assembly = Assembly.Load(assemblyBytes);
+#endif
+
+            // Process the assembly.
+            ProcessAssembly();
+        }
+
+        /// <summary>
+        /// Preprocess the target assembly.
+        /// </summary>
+        public static void Preprocess()
+        {
+            if (!HasBeenInitialized)
+                throw new Exception("Please initialize the processor before calling Preprocess.");
+
+            TargetStream.Position = 0;
+
+            BlurLibrary
+                .GetType(PROCESSOR_FULLNAME)
+                .GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
+                .Invoke(null, new object[] { TargetStream });
+        }
+        #endregion
+
+        #region Assembly Resolution
         /// <summary>
         /// Attempts to resolve an assembly.
         /// </summary>
@@ -96,8 +176,10 @@ namespace Blur.Processing
             return AssemblyResolver.Resolve(e.Name);
         }
 #endif
+        #endregion
 
-        /// <summary>
+        #region Utils
+		/// <summary>
         /// Create a BlurAttribute, given its custom attribute data.
         /// </summary>
         private static object CreateAttribute(CustomAttributeData blurAttribute)
@@ -136,40 +218,10 @@ namespace Blur.Processing
             return attrObj;
         }
 
-
-        /// <summary>
-        /// Preprocess the target assembly.
-        /// </summary>
-        public static void Preprocess(string assemblyPath, string copyPath = null)
-        {
-            AssemblyPath = assemblyPath;
-            AssemblyDirectory = Path.GetDirectoryName(assemblyPath);
-
-            if (copyPath == null)
-                copyPath = Path.GetTempFileName();
-
-            File.Copy(assemblyPath, copyPath, true);
-
-            AppDomain.CurrentDomain.AssemblyResolve += ResolvingAssembly;
-
-            Assembly target = Assembly.LoadFrom(assemblyPath);
-
-            CustomAttributeData blurAttribute =
-                target.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == ATTRIBUTE_FULLNAME);
-
-            if (blurAttribute == null)
-                throw new ArgumentException("The given assembly must be marked with the Blur attribute.");
-
-            blurAttribute.AttributeType.Assembly
-                         .GetType(PROCESSOR_FULLNAME)
-                         .GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
-                         .Invoke(null, new object[] { File.Open(copyPath, FileMode.Open) });
-        }
-
         /// <summary>
         /// Process the target assembly.
         /// </summary>
-        private static void ProcessAssembly(string copyPath)
+        private static void ProcessAssembly()
         {
             // Get the BlurAttribute set on the assembly.
             CustomAttributeData blurAttribute =
@@ -219,9 +271,12 @@ namespace Blur.Processing
                     MessageLogged?.Invoke(msg);
             }));
 
+            TargetStream.Position = 0;
+
             // Call Processor.Process();
             processor.GetMethod(PROCESSOR_METHOD, new[] { typeof(string), typeof(Assembly), attrObj.GetType(), typeof(Stream) })
-                     .Invoke(null, new[] { copyPath, Assembly, attrObj, File.Open(copyPath, FileMode.Open) });
+                     .Invoke(null, new[] { TargetPath, Assembly, attrObj, TargetStream });
         }
+        #endregion
     }
 }

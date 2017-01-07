@@ -27,16 +27,6 @@ namespace Blur.Processing
             Debugger.Launch();
 #endif
 
-            if (Preprocess)
-            {
-                Process process = Process.Start(Assembly.GetExecutingAssembly().Location, $"-p \"{TargetAssembly}\" \"{TargetAssembly}.pre\" \"{TargetReferences}\"");
-
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
-                    return false;
-            }
-
             try
             {
                 AssemblyResolver.References = TargetReferences.Split(';');
@@ -44,10 +34,17 @@ namespace Blur.Processing
                 Processor.MessageLogged += Processor_MessageLogged;
                 Processor.WarningLogged += Processor_WarningLogged;
 
-                Processor.Process(Path.GetFullPath(TargetAssembly) + ".pre", TargetPath);
+                Processor.Initialize(Path.GetFullPath(TargetAssembly), TargetPath);
+
+                if (Preprocess)
+                    Processor.Preprocess();
+
+                Processor.Process();
             }
             catch (Exception e)
             {
+                Processor.Cancel();
+
                 if (e is TargetInvocationException && e.InnerException != null)
                     e = e.InnerException;
 
@@ -73,6 +70,8 @@ namespace Blur.Processing
 
                 return false;
             }
+
+            Processor.Dispose();
 
             return true;
         }

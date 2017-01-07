@@ -3,31 +3,20 @@
 
     <!-- Properties -->
     <PropertyGroup>
-        <BlurTargetPath>@(IntermediateAssembly->'%(FullPath).temp')</BlurTargetPath>
-        <BlurPreTargetPath>@(IntermediateAssembly->'%(FullPath).pre.temp')</BlurPreTargetPath>
+        <BlurTargetPath>@(IntermediateAssembly->'%(FullPath).blurry')</BlurTargetPath>
         <BlurFilename>Blur.exe</BlurFilename>
     </PropertyGroup>
     
     <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
         <BlurPath>$(MSBuildThisFileDirectory)..\tools\$(BlurFilename)</BlurPath>
-        <BlurCommand>"$(BlurPath)"</BlurCommand>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
         <BlurPath>$(MSBuildThisFileDirectory)../tools/$(BlurFilename)</BlurPath>
-        <BlurCommand>mono "$(BlurPath)"</BlurCommand>
     </PropertyGroup>
 
     <!-- Processing -->
     <UsingTask TaskName="Blur.Processing.BlurTask" AssemblyFile="$(BlurPath)" />
-
-    <!--<Target Name="BlurPreprocessing" AfterTargets="AfterCompile"
-            Inputs="@(IntermediateAssembly)" Outputs="$(BlurPreTargetPath)">
-        <Blur.Processing.BlurTask TargetAssembly="@(IntermediateAssembly)"
-                                  TargetPath="$(BlurPreTargetPath)"
-                                  TargetReferences="@(ReferencePath)"
-                                  Preprocess="True" />
-    </Target>-->
     
     <Target Name="BlurProcessing" AfterTargets="AfterCompile"
             Inputs="@(IntermediateAssembly)" Outputs="$(BlurTargetPath)">       

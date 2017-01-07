@@ -26,30 +26,33 @@ namespace Blur
                 return false;
 
             Instruction firstIns = method.Body.Instructions[0];
-            TypeReference operand = firstIns.Operand as TypeReference;
+            MethodReference operand = firstIns.Operand as MethodReference;
 
-            if (operand != null && operand.Name == nameof(ExternalMethodException))
-                return true;
-
-            return false;
+            return operand != null
+                && firstIns.OpCode.Code == Code.Newobj
+                && operand.DeclaringType.Name == nameof(ExternalMethodException)
+                && operand.Name == ".ctor";
         }
 
         #region IsMatch
+
         /// <summary>
         /// Returns whether or not the given <paramref name="type"/>
         /// implements the interface <typeparamref name="T"/>.
         /// </summary>
         public static bool Implements<T>(this TypeDefinition type)
         {
-            if (!type.HasInterfaces)
-                return false;
+            while (type != null)
+            {
+                string toCompare = typeof(T).FullName;
+                var interfaces = type.Interfaces;
 
-            string toCompare = typeof(T).FullName;
-            var interfaces = type.Interfaces;
+                for (int i = 0; i < interfaces.Count; i++)
+                    if (interfaces[i].InterfaceType.FullName == toCompare)
+                        return true;
 
-            for (int i = 0; i < interfaces.Count; i++)
-                if (interfaces[i].InterfaceType.FullName == toCompare)
-                    return true;
+                type = type.BaseType?.Resolve();
+            }
 
             return false;
         }
@@ -58,7 +61,7 @@ namespace Blur
         /// Returns whether or not the given <paramref name="type"/>
         /// inherits the type <typeparamref name="T"/>.
         /// </summary>
-        public static bool Inherits<T>(this TypeDefinition type)
+        public static bool Inherits<T>(this TypeReference type)
             => type.Inherits(typeof(T));
 
         /// <summary>
@@ -89,7 +92,7 @@ namespace Blur
         {
             TypeInfo type = attribute.AttributeType.AsTypeInfo();
 
-            T weaver = (T)Activator.CreateInstance(type.AsType(), attribute.ConstructorArguments.Convert(x => x.Value));
+            T weaver = (T)Activator.CreateInstance(type.AsType(), attribute.ConstructorArguments.Convert(GetValue));
 
             foreach (var field in attribute.Fields)
                 type.GetDeclaredField(field.Name)
@@ -349,6 +352,9 @@ namespace Blur
         /// </summary>
         public static bool Is(this TypeReference typeRef, Type type, bool acceptDerivedTypes = true)
         {
+            if (typeRef.IsGenericInstance)
+                typeRef = typeRef.GetElementType();
+
             TypeDefinition def;
             return typeRef.FullName == type.FullName ||
                 (acceptDerivedTypes && (def = typeRef.Resolve())?.BaseType != null && def.BaseType.Is(type, true));
@@ -357,6 +363,9 @@ namespace Blur
         /// <inheritdoc cref="Is(TypeReference, Type, bool)"/>
         public static bool Is(this TypeReference typeRef, TypeReference type, bool acceptDerivedTypes = true)
         {
+            if (typeRef.IsGenericInstance)
+                typeRef = typeRef.GetElementType();
+
             TypeDefinition def;
             return typeRef.FullName == type.FullName ||
                 (acceptDerivedTypes && (def = typeRef.Resolve())?.BaseType != null && def.BaseType.Is(type, true));

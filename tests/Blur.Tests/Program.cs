@@ -22,6 +22,9 @@ namespace Blur.Tests
             return null;
         }
 
+        [return: True]
+        static extern bool ReturnTrue();
+
         [Mixin]
         static void Mixin(TypeDefinition type)
         {
@@ -45,6 +48,7 @@ namespace Blur.Tests
             TestExpressions.Add(1, 2).ShouldBe(3);
             TestExpressions.Greatest(1, 2).ShouldBe(2);
 
+            ReturnTrue().ShouldBe(true);
             HasBeenModified.ShouldBe(true);
 
             Console.WriteLine("Tests were successful.");

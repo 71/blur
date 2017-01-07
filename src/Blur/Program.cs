@@ -10,7 +10,7 @@ namespace Blur.Processing
     public class Program
     {
         /// <summary>
-        /// Main function that'll call <see cref="Processor.Process(string, string)"/>
+        /// Main function that'll interact with the <see cref="Processor"/>
         /// with the given arguments.
         /// </summary>
         public static int Main(string[] args)
@@ -27,7 +27,7 @@ namespace Blur.Processing
             if (args.Length == 0 || args.Length > 3)
             {
                 Console.WriteLine("Usage: blur.exe [-p] [target] [save] [references]");
-                Console.WriteLine(" - p:        Preprocess the assembly.");
+                Console.WriteLine(" - p:          Preprocess the assembly.");
                 Console.WriteLine(" - target:     Path to the assembly to process.");
                 Console.WriteLine(" - save:       Path to the file that'll be created.");
                 Console.WriteLine(" - references: Semicolon-separated list containing");
@@ -45,13 +45,17 @@ namespace Blur.Processing
                 if (args.Length == 3)
                     AssemblyResolver.References = args[2].Split(';');
 
+                Processor.Initialize(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
+
                 if (willPreprocess)
-                    Processor.Preprocess(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
-                else
-                    Processor.Process(Path.GetFullPath(args[0]), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
+                    Processor.Preprocess();
+
+                Processor.Process();
             }
             catch (Exception e)
             {
+                Processor.Cancel();
+
                 if (e is TargetInvocationException && e.InnerException != null)
                     e = e.InnerException;
 
@@ -73,6 +77,8 @@ namespace Blur.Processing
 
                 return 1;
             }
+
+            Processor.Dispose();
 
             return 0;
         }

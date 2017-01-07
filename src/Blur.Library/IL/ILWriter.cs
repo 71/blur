@@ -80,7 +80,7 @@ namespace Blur
             this.readOnlyInstructions =
                 new Lazy<ReadOnlyCollection<Instruction>>(() => new ReadOnlyCollection<Instruction>(instructions));
 
-            if (clean)
+            if (clean || method.IsExtern())
                 this.instructions.Clear();
         }
 
