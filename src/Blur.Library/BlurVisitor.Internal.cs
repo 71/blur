@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Mono.Cecil;
 
 namespace Blur
@@ -36,8 +34,6 @@ namespace Blur
             for (int i = 0; i < attributes.Count; i++)
             {
                 CustomAttribute attr = attributes[i];
-
-                Blur.Log($"Visiting {attr.AttributeType}");
 
                 if (!attr.AttributeType.Resolve().Implements<IWeaver>())
                     continue;
@@ -93,8 +89,7 @@ namespace Blur
         protected override void Visit(MethodDefinition method)
         {
             {
-                // Put this in its own scope to avoid putting returnType
-                // in lambdas.
+                // Put this in its own scope to avoid having returnType in the following call sites.
                 MethodReturnType returnType = method.MethodReturnType;
                 if (returnType.HasCustomAttributes)
                     Visit<IReturnValueWeaver>(returnType.CustomAttributes, weaver => weaver.Apply(returnType, method));

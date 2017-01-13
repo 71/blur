@@ -352,8 +352,16 @@ namespace Blur
         /// </summary>
         public static bool Is(this TypeReference typeRef, Type type, bool acceptDerivedTypes = true)
         {
-            if (typeRef.IsGenericInstance)
-                typeRef = typeRef.GetElementType();
+            if (typeRef is GenericInstanceType)
+            {
+                var genArgs = ((GenericInstanceType)typeRef).GenericArguments;
+
+                if (type.GenericTypeArguments.Length != genArgs.Count)
+                    return false;
+
+                return typeRef.Namespace == type.Namespace && typeRef.Name == type.Name
+                       && type.GenericTypeArguments.CompareSequences(genArgs, (sr, mc) => sr.Is(mc));
+            }
 
             TypeDefinition def;
             return typeRef.FullName == type.FullName ||
@@ -363,10 +371,22 @@ namespace Blur
         /// <inheritdoc cref="Is(TypeReference, Type, bool)"/>
         public static bool Is(this TypeReference typeRef, TypeReference type, bool acceptDerivedTypes = true)
         {
-            if (typeRef.IsGenericInstance)
-                typeRef = typeRef.GetElementType();
-
             TypeDefinition def;
+
+            if (typeRef.IsGenericInstance == type.IsGenericInstance && typeRef is GenericInstanceType)
+            {
+                var genArgs = ((GenericInstanceType)typeRef).GenericArguments;
+                var genArgs2 = ((GenericInstanceType)type).GenericArguments;
+
+                if (genArgs2.Count != genArgs.Count)
+                    return false;
+
+                return typeRef.Namespace == type.Namespace && typeRef.Name == type.Name && genArgs.SequenceEqual(genArgs2);
+            }
+
+            typeRef = typeRef.GetElementType();
+            type = type.GetElementType();
+
             return typeRef.FullName == type.FullName ||
                 (acceptDerivedTypes && (def = typeRef.Resolve())?.BaseType != null && def.BaseType.Is(type, true));
         }
@@ -397,6 +417,23 @@ namespace Blur
         /// Returns whether or not <paramref name="fieldRef"/> is or inherits <paramref name="field"/>.
         /// </summary>
         public static bool Is(this FieldReference fieldRef, FieldInfo field) => fieldRef.Name == field.Name && fieldRef.DeclaringType.Is(field.DeclaringType);
+        #endregion
+
+        #region Import
+        /// <summary>
+        /// Imports the given <see cref="TypeReference"/>, and returns it.
+        /// </summary>
+        public static TypeReference Import(this TypeReference reference) => Processor.TargetModuleDefinition.ImportReference(reference);
+
+        /// <summary>
+        /// Imports the given <see cref="MethodReference"/>, and returns it.
+        /// </summary>
+        public static MethodReference Import(this MethodReference reference) => Processor.TargetModuleDefinition.ImportReference(reference);
+
+        /// <summary>
+        /// Imports the given <see cref="FieldReference"/>, and returns it.
+        /// </summary>
+        public static FieldReference Import(this FieldReference reference) => Processor.TargetModuleDefinition.ImportReference(reference); 
         #endregion
     }
 }

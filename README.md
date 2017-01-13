@@ -56,14 +56,14 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
         ILWriter writer = method.Write();
 
         // Iterate over every instruction in the method's body.
-        // If the body body is changed during an iteration, the
+        // If the body is changed during an iteration, the
         // current position of the ILWriter (obtainable with the
         // ILWriter.Position property) will be automatically updated.
         writer.ForEach(ins =>
         {
             // If the opcode of the instruction is "ret", ...
             // For those of you that are not familiar with IL, "ret" is
-            // the opcode that corresponds to "return" the value at the top of the stack.
+            // the opcode that corresponds to "return the value at the top of the stack".
             if (ins.OpCode == OpCodes.Ret)
                 // ILWriter's fluent API chains calls together.
                 // The following expression will write the following IL code:

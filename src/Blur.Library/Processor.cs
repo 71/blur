@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using Mono.Cecil;
 using System.Linq;
+using Mono.Cecil.Cil;
 
 // This file defines the internal Blur processor.
 // If the signature of the declarations below changes,
@@ -24,6 +25,8 @@ namespace Blur
         public static Module TargetModule { get; private set; }
         public static ModuleDefinition TargetModuleDefinition { get; private set; }
 
+        public static Stream SymbolsStream { get; private set; }
+
 #pragma warning disable CS0649
         public static Func<Assembly[]> GetAssemblies;
         public static Func<string, Assembly> GetAssembly;
@@ -39,21 +42,18 @@ namespace Blur
         /// <param name="weavingAssembly">The <see cref="Assembly"/> to process.</param>
         /// <param name="settings">The <see cref="BlurAttribute"/> set on the <see cref="Assembly"/> to process.</param>
         /// <param name="targetStream"><see cref="Stream"/> to the assembly to weave.</param>
-        public static void Process(string targetPath, Assembly weavingAssembly, BlurAttribute settings, Stream targetStream)
+        /// <param name="symbolStream"><see cref="Stream"/> to the symbols of the assembly to weave, or <see langword="null"/>.</param>
+        public static void Process(string targetPath, Assembly weavingAssembly, BlurAttribute settings, Stream targetStream, Stream symbolStream)
         {
             Settings = settings;
             Target = weavingAssembly;
+            SymbolsStream = symbolStream;
 
             // Open a stream to the assembly.
             // Currently, Mono.Cecil crashes if it owns the stream, so we do it ourselves.
             using (targetStream)
             {
-                TargetDefinition = AssemblyDefinition.ReadAssembly(targetStream, new ReaderParameters
-                {
-                    InMemory = true,
-                    ReadWrite = true,
-                    AssemblyResolver = new AssemblyResolver()
-                });
+                TargetDefinition = ReadAssembly(targetStream);
                 TargetModuleDefinition = TargetDefinition.MainModule;
                 TargetModule = Target.Modules.FirstOrDefault(x => x.Name == TargetModuleDefinition.Name)
                                ?? Target.Modules.First();
@@ -98,14 +98,7 @@ namespace Blur
                     CleanUp();
 
                 // Save assembly.
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    TargetDefinition.Write(ms);
-
-                    targetStream.SetLength(0);
-                    ms.Position = 0;
-                    ms.CopyTo(targetStream);
-                }
+                SaveAssembly(TargetDefinition, targetStream);
             }
         }
 
@@ -193,11 +186,11 @@ namespace Blur
             {
                 visitor.Visit(toVisit[i]);
 
-                if (toVisit.Count != count)
-                {
-                    i += toVisit.Count - count;
-                    count = toVisit.Count;
-                }
+                if (toVisit.Count == count)
+                    continue;
+
+                i += toVisit.Count - count;
+                count = toVisit.Count;
             }
         }
 
@@ -253,5 +246,53 @@ namespace Blur
                 }
             }
         }
+
+
+        #region Utils
+        // TODO: Fix symbols loading.
+        // Right now, Mono.Cecil throws when reading symbols in the tests, which is why
+        // we're not doing it.
+
+        private static AssemblyDefinition ReadAssembly(Stream assemblyStream)
+        {
+            assemblyStream.Position = 0;
+
+            return AssemblyDefinition.ReadAssembly(assemblyStream, /*SymbolsStream == null
+                ? */new ReaderParameters
+                {
+                    InMemory = true,
+                    ReadWrite = true,
+                    AssemblyResolver = new AssemblyResolver()
+                }/* : new ReaderParameters
+                {
+                    InMemory = true,
+                    ReadWrite = true,
+                    AssemblyResolver = new AssemblyResolver(),
+                    // ReadSymbols = true,
+                    // SymbolStream = SymbolsStream,
+                    // SymbolReaderProvider = new PortablePdbReaderProvider()
+                }*/);
+        }
+
+        private static void SaveAssembly(AssemblyDefinition definition, Stream stream)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                definition.Write(ms,/* SymbolsStream == null
+                    ? */new WriterParameters()
+                    /*: new WriterParameters
+                    {
+                        WriteSymbols = true,
+                        SymbolStream = SymbolsStream,
+                        SymbolWriterProvider = new PortablePdbWriterProvider()
+                    }*/);
+
+                stream.SetLength(0);
+
+                ms.Position = 0;
+                ms.CopyTo(stream);
+            }
+        } 
+        #endregion
     }
 }

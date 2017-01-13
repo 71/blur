@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Blur
 {
@@ -13,6 +14,25 @@ namespace Blur
             Func<T, V> firstGetter, Func<U, V> secondGetter)
         {
             return first.Select(firstGetter).SequenceEqual(second.Select(secondGetter));
+        }
+
+        internal static bool CompareSequences<T, U>(this IEnumerable<T> first, IEnumerable<U> second,
+            Func<T, U, bool> predicate)
+        {
+            using (IEnumerator<T> e1 = first.GetEnumerator())
+            using (IEnumerator<U> e2 = second.GetEnumerator())
+            {
+                while (e1.MoveNext())
+                {
+                    if (!(e2.MoveNext() && predicate(e1.Current, e2.Current)))
+                        return false;
+                }
+
+                if (e2.MoveNext())
+                    return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -29,20 +49,9 @@ namespace Blur
                 return type.Methods.FirstOrDefault(x => x.Name == name);
 
             return type.Methods.FirstOrDefault(x => x.Name == name
-                                          && x.Parameters.CompareSequences(parameterTypes,
-                                                y => y.ParameterType.FullName, y => y.FullName));
+                                          && x.Parameters.Count == parameterTypes.Length
+                                          && x.Parameters.CompareSequences(parameterTypes, (mc, sr) => mc.ParameterType.Is(sr)));
         }
-
-        ///// <inheritdoc cref="FindMethod(TypeDefinition, string, Type[])"/>
-        //public static MethodDefinition FindMethod(this TypeDefinition type, string name, params TypeReference[] parameterTypes)
-        //{
-        //    if (parameterTypes == null)
-        //        return type.Methods.FirstOrDefault(x => x.Name == name);
-
-        //    return type.Methods.FirstOrDefault(x => x.Name == name
-        //                                  && x.Parameters.CompareSequences(parameterTypes,
-        //                                        y => y.ParameterType.FullName, y => y.FullName));
-        //}
 
         /// <summary>
         /// Find a field, given its declaring <paramref name="type"/>
@@ -97,8 +106,8 @@ namespace Blur.Extensions
                 return type.Methods.FirstOrDefault(x => x.Name == name);
 
             return type.Methods.FirstOrDefault(x => x.Name == name
-                                          && x.Parameters.CompareSequences(parameterTypes,
-                                                y => y.ParameterType.FullName, y => y.FullName));
+                                          && x.Parameters.Count == parameterTypes.Length
+                                          && x.Parameters.CompareSequences(parameterTypes, (mc, sr) => mc.ParameterType.Is(sr)));
         }
 
         /// <summary>
@@ -147,6 +156,60 @@ namespace Blur.Extensions
                 throw new ArgumentException("Invalid expression given.", nameof(expr));
 
             return typeof(T).GetDefinition().FindEvent(ex.Member.Name);
+        }
+
+        /// <summary>
+        /// Find the backing field of the given property.
+        /// </summary>
+        /// <param name="property">The property whose backing field will be retrieved.</param>
+        public static FieldReference FindBackingField(this PropertyReference property)
+        {
+            // Try direct reference.
+            FieldReference field = new FieldReference($"<{property.Name}>k__BackingField", property.PropertyType,
+                property.DeclaringType);
+
+            if ((field = field.Resolve()) != null)
+                return field;
+
+            // Not compiler generated; try the body.
+            try
+            {
+                PropertyDefinition propDef = property.Resolve();
+
+                if (propDef.GetMethod != null)
+                {
+                    foreach (var ins in propDef.GetMethod.Body.Instructions)
+                    {
+                        if (ins.OpCode.Code != Code.Ldfld && ins.OpCode.Code != Code.Ldsfld)
+                            continue;
+
+                        field = ins.Operand as FieldReference;
+
+                        if (field != null && field.FieldType.Is(property.PropertyType))
+                            return field;
+                    }
+                }
+
+                if (propDef.SetMethod != null)
+                {
+                    foreach (var ins in propDef.SetMethod.Body.Instructions)
+                    {
+                        if (ins.OpCode.Code != Code.Stfld && ins.OpCode.Code != Code.Stsfld)
+                            continue;
+
+                        field = ins.Operand as FieldReference;
+
+                        if (field != null && field.FieldType.Is(property.PropertyType))
+                            return field;
+                    }
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

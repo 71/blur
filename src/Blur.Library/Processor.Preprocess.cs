@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -32,24 +27,11 @@ namespace Blur
         /// </summary>
         public static void Preprocess(Stream targetStream)
         {
-            targetStream.Position = 0;
-
-            AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(targetStream, new ReaderParameters
-            {
-                InMemory = true,
-                ReadWrite = true
-            });
+            AssemblyDefinition assembly = ReadAssembly(targetStream);
 
             FixExternals(assembly);
 
-            using (MemoryStream ms = new MemoryStream())
-            {
-                assembly.Write(ms);
-                targetStream.SetLength(0);
-
-                ms.Position = 0;
-                ms.CopyTo(targetStream);
-            }
+            SaveAssembly(assembly, targetStream);
         }
 
         /// <summary>
@@ -66,11 +48,25 @@ namespace Blur
             {
                 foreach (MethodDefinition method in type.Methods)
                 {
-                    if (method.RVA != 0)
-                        continue;
+                    if (method.RVA == 0)
+                    {
+                        method.Body.Instructions.Add(Instruction.Create(OpCodes.Newobj, emeCtor));
+                        method.Body.Instructions.Add(Instruction.Create(OpCodes.Throw));
+                    }
+                    else
+                    {
+                        // Not really the point of the method, but putting this here avoids
+                        // making another loop.
+                        CustomAttribute debugAttrData = method.GetAttribute<DebugAttribute>();
 
-                    method.Body.Instructions.Add(Instruction.Create(OpCodes.Newobj, emeCtor));
-                    method.Body.Instructions.Add(Instruction.Create(OpCodes.Throw));
+                        if (debugAttrData == null)
+                            continue;
+
+                        // Should the feature be needed, I could make this feature available
+                        // to all weavers. But right now, only the Debug attribute needs it.
+                        DebugAttribute debugAttr = debugAttrData.CreateInstance<DebugAttribute>();
+                        debugAttr.Apply(method);
+                    }
                 }
             }
         }

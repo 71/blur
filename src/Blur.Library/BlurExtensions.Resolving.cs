@@ -137,6 +137,8 @@ namespace Blur
                 return Processor.TargetModuleDefinition.ImportReference(reference).Resolve();
             if ((reference = Processor.TargetModuleDefinition.GetType(type.FullName)) != null)
                 return (TypeDefinition)reference;
+            if ((reference = type.GetReference()) != null)
+                return reference.Resolve();
 
             throw new Exception($"Cannot get definition for {type.FullName}");
         }
@@ -155,6 +157,8 @@ namespace Blur
                 return Processor.TargetModuleDefinition.ImportReference(reference).Resolve();
             if ((reference = Processor.TargetModuleDefinition.GetType(type.FullName)) != null)
                 return (TypeDefinition)reference;
+            if ((reference = type.GetReference()) != null)
+                return reference.Resolve();
 
             throw new Exception($"Cannot get definition for {type.FullName}");
         }

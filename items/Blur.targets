@@ -31,7 +31,7 @@
         <Copy SourceFiles="$(BlurTargetPath)"
               DestinationFiles="@(IntermediateAssembly)"
               OverwriteReadOnlyFiles="True" ContinueOnError="False" />
-        <Message Text="Blur successfully ran." />
+        <Message Text="Blur successfully processed the given assembly." />
     </Target>
     
 </Project>

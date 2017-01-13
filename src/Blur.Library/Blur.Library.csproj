@@ -40,6 +40,7 @@
   <ItemGroup>
     <Compile Include="..\..\items\AssemblyVersion.cs" />
     <Compile Include="AssemblyResolver.cs" />
+    <Compile Include="Attributes\Debug.cs" />
     <Compile Include="Blur.cs" />
     <Compile Include="BlurAttribute.cs" />
     <Compile Include="BlurExtensions.cs" />
@@ -74,11 +75,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Instructions.tt</DependentUpon>
     </Compile>
-    <Compile Include="Mixin.cs" />
-    <Compile Include="Processor.Pre.cs" />
+    <Compile Include="Attributes\Mixin.cs" />
+    <Compile Include="Processor.Preprocess.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Weavers.cs" />
+    <Compile Include="Attributes\Weavers.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="IL\ILWriter.Delegates.tt">

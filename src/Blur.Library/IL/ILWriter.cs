@@ -92,7 +92,7 @@ namespace Blur
         [SuppressMessage("ReSharper", "ParameterHidesMember", Justification = "Both the field and the parameter have clear names.")]
         public ILWriter To(int position)
         {
-            if (position >= instructions.Count)
+            if (position > instructions.Count)
                 throw new IndexOutOfRangeException();
 
             this.position = position;
@@ -103,13 +103,19 @@ namespace Blur
         /// Go to the end of the body being written,
         /// and return <see langword="this"/>.
         /// </summary>
-        public ILWriter ToEnd() => this.To(instructions.Count - 1);
+        public ILWriter ToEnd() => this.To(instructions.Count);
 
         /// <summary>
         /// Go to the start of the body being written,
         /// and return <see langword="this"/>.
         /// </summary>
         public ILWriter ToStart() => this.To(0);
+
+        /// <summary>
+        /// Go to the last instruction of the body being written,
+        /// and return <see langword="this"/>.
+        /// </summary>
+        public ILWriter ToLast() => this.To(instructions.Count - 1);
         #endregion
 
         #region Remove / Replace

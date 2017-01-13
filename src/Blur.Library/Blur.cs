@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Mono.Cecil;
 
 namespace Blur
@@ -27,6 +29,18 @@ namespace Blur
         public static void Log(string msg, bool isWarning = false)
         {
             Processor.LogMessage(msg, isWarning);
+        }
+
+        /// <summary>
+        /// Debugs the code currently running.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Debug()
+        {
+            if (Debugger.IsAttached)
+                Debugger.Break();
+            else
+                Debugger.Launch();
         }
     }
 }

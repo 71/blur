@@ -32,10 +32,12 @@ namespace Blur.Processing
         private static string AssemblyPath;
 
         private static Stream TargetStream;
+        private static Stream SymbolStream;
         private static string TargetPath;
 
         private static Assembly Assembly;
         private static Assembly BlurLibrary;
+        private static Type ProcessorType;
 
         public static event Action<string> MessageLogged;
         public static event Action<string> WarningLogged;
@@ -75,7 +77,8 @@ namespace Blur.Processing
             // Load Blur.Library first.
             if (AssemblyResolver.References != null)
             {
-                string blurLibraryPath = AssemblyResolver.References.FirstOrDefault(x => x.EndsWith("Blur.Library.dll", StringComparison.OrdinalIgnoreCase));
+                string blurLibraryPath = AssemblyResolver.References
+                    .FirstOrDefault(x => x.EndsWith("Blur.Library.dll", StringComparison.OrdinalIgnoreCase));
 
                 if (blurLibraryPath != null)
                     BlurLibrary = Assembly.LoadFrom(blurLibraryPath);
@@ -86,6 +89,15 @@ namespace Blur.Processing
 
             // Load the assembly to modify.
             TargetStream = File.Open(copyPath, FileMode.Open, FileAccess.ReadWrite);
+
+            // If possible, load the symbols.
+            string symbolsPath;
+
+            if (File.Exists(symbolsPath = Path.ChangeExtension(assemblyPath, ".pdb")))
+                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite);
+
+            else if (File.Exists(symbolsPath = Path.ChangeExtension(symbolsPath, ".mdb")))
+                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite);
         }
 
         /// <summary>
@@ -129,6 +141,9 @@ namespace Blur.Processing
 
             Assembly = Assembly.Load(assemblyBytes);
 #endif
+            // Initialize the remote processor.
+            if (ProcessorType == null)
+                ProcessorType = GetRemoteProcessor();
 
             // Process the assembly.
             ProcessAssembly();
@@ -144,10 +159,12 @@ namespace Blur.Processing
 
             TargetStream.Position = 0;
 
-            BlurLibrary
-                .GetType(PROCESSOR_FULLNAME)
-                .GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
-                .Invoke(null, new object[] { TargetStream });
+            // Initialize the remote processor.
+            if (ProcessorType == null)
+                ProcessorType = GetRemoteProcessor();
+
+            ProcessorType.GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
+                         .Invoke(null, new object[] { TargetStream });
         }
         #endregion
 
@@ -179,6 +196,49 @@ namespace Blur.Processing
         #endregion
 
         #region Utils
+        /// <summary>
+        /// Returns the type of the remote processor, after initializing it.
+        /// </summary>
+        private static Type GetRemoteProcessor()
+        {
+            Type processor = BlurLibrary.GetType(PROCESSOR_FULLNAME);
+
+            // Set the processor's "tunnel" functions.
+            Func<Assembly[]> getAssemblies = AppDomain.CurrentDomain.GetAssemblies;
+            Func<string, Assembly> getAssembly = assemblyName
+                => AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName)
+                ?? AssemblyResolver.Resolve(new AssemblyName(assemblyName));
+            Func<string, Stream> getAssemblyStream = assemblyName =>
+            {
+                string location = getAssembly(assemblyName)?.Location;
+
+                if (location == null)
+                    return null;
+
+                try
+                {
+                    return File.OpenRead(location);
+                }
+                catch
+                {
+                    return null;
+                }
+            };
+
+            processor.GetField(PROCESSOR_GETASSEMBLIES).SetValue(null, getAssemblies);
+            processor.GetField(PROCESSOR_GETASSEMBLY).SetValue(null, getAssembly);
+            processor.GetField(PROCESSOR_GETASSEMBLYSTREAM).SetValue(null, getAssemblyStream);
+            processor.GetField(PROCESSOR_LOGMESSAGE).SetValue(null, new Action<string, bool>((msg, isWarning) =>
+                     {
+                         if (isWarning)
+                             WarningLogged?.Invoke(msg);
+                         else
+                             MessageLogged?.Invoke(msg);
+                     }));
+
+            return processor;
+        }
+
 		/// <summary>
         /// Create a BlurAttribute, given its custom attribute data.
         /// </summary>
@@ -234,48 +294,14 @@ namespace Blur.Processing
             object attrObj = CreateAttribute(blurAttribute);
 
             // Retrieve the BlurAttribute's TypeInfo, to access its declaring Assembly.
-            TypeInfo attributeType = blurAttribute.AttributeType.GetTypeInfo();
-
-            // Set the processor's "tunnel" functions.
-            Func<Assembly[]> getAssemblies = AppDomain.CurrentDomain.GetAssemblies;
-            Func<string, Assembly> getAssembly = assemblyName
-                => AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName)
-                ?? AssemblyResolver.Resolve(new AssemblyName(assemblyName));
-            Func<string, Stream> getAssemblyStream = assemblyName =>
-            {
-                string location = getAssembly(assemblyName)?.Location;
-
-                if (location == null)
-                    return null;
-
-                try
-                {
-                    return File.OpenRead(location);
-                }
-                catch
-                {
-                    return null;
-                }
-            };
-
-            Type processor = attributeType.Assembly.GetType(PROCESSOR_FULLNAME);
-
-            processor.GetField(PROCESSOR_GETASSEMBLIES).SetValue(null, getAssemblies);
-            processor.GetField(PROCESSOR_GETASSEMBLY).SetValue(null, getAssembly);
-            processor.GetField(PROCESSOR_GETASSEMBLYSTREAM).SetValue(null, getAssemblyStream);
-            processor.GetField(PROCESSOR_LOGMESSAGE).SetValue(null, new Action<string, bool>((msg, isWarning) =>
-            {
-                if (isWarning)
-                    WarningLogged?.Invoke(msg);
-                else
-                    MessageLogged?.Invoke(msg);
-            }));
+            if (BlurLibrary == null)
+                BlurLibrary = blurAttribute.AttributeType.GetTypeInfo().Assembly;
 
             TargetStream.Position = 0;
 
             // Call Processor.Process();
-            processor.GetMethod(PROCESSOR_METHOD, new[] { typeof(string), typeof(Assembly), attrObj.GetType(), typeof(Stream) })
-                     .Invoke(null, new[] { TargetPath, Assembly, attrObj, TargetStream });
+            ProcessorType.GetMethod(PROCESSOR_METHOD, new[] { typeof(string), typeof(Assembly), attrObj.GetType(), typeof(Stream), typeof(Stream) })
+                         .Invoke(null, new[] { TargetPath, Assembly, attrObj, TargetStream, SymbolStream });
         }
         #endregion
     }
