@@ -8,11 +8,11 @@
     </PropertyGroup>
     
     <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-        <BlurPath>$(MSBuildThisFileDirectory)..\tools\$(BlurFilename)</BlurPath>
+        <BlurPath>$(MSBuildThisFileDirectory)..\..\tools\$(BlurFilename)</BlurPath>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-        <BlurPath>$(MSBuildThisFileDirectory)../tools/$(BlurFilename)</BlurPath>
+        <BlurPath>$(MSBuildThisFileDirectory)../../tools/$(BlurFilename)</BlurPath>
     </PropertyGroup>
 
     <!-- Processing -->

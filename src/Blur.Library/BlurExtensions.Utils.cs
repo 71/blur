@@ -42,9 +42,10 @@ namespace Blur
         /// </summary>
         public static bool Implements<T>(this TypeDefinition type)
         {
+            string toCompare = typeof(T).FullName;
+
             while (type != null)
             {
-                string toCompare = typeof(T).FullName;
                 var interfaces = type.Interfaces;
 
                 for (int i = 0; i < interfaces.Count; i++)

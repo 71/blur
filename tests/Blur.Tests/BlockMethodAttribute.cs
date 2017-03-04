@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -26,7 +22,9 @@ namespace Blur.Tests
             writer.ForEach(ins =>
             {
                 if (ins.OpCode == OpCodes.Ret)
-                    writer.Before(ins).Call(typeof(Console).GetMethod(nameof(Console.ReadLine))).Pop();
+                    writer.Before(ins)
+                          .Call(typeof(Console).GetMethod(nameof(Console.ReadLine)))
+                          .Pop();
             });
         }
     }

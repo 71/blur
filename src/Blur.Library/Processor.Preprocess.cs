@@ -25,26 +25,29 @@ namespace Blur
         /// <summary>
         /// Prepares an assembly for processing.
         /// </summary>
-        public static void Preprocess(Stream targetStream)
+        public static void Preprocess(Stream targetStream, Stream symbolStream)
         {
-            AssemblyDefinition assembly = ReadAssembly(targetStream);
+            SymbolsStream = symbolStream;
 
-            FixExternals(assembly);
+            TargetDefinition = ReadAssembly(targetStream);
+            TargetModuleDefinition = TargetDefinition.MainModule;
 
-            SaveAssembly(assembly, targetStream);
+            FixExternals();
+
+            SaveAssembly(targetStream);
         }
 
         /// <summary>
         /// Gives a body to all <see langword="extern"/> methods in an assembly.
         /// </summary>
-        private static void FixExternals(AssemblyDefinition assembly)
+        private static void FixExternals()
         {
-            TypeReference emeType = assembly.MainModule.GetType("Blur.ExternalMethodException", true);
-            MethodReference emeCtor = new MethodReference(".ctor", assembly.MainModule.TypeSystem.Void, emeType);
+            TypeReference emeType = TargetModuleDefinition.GetType("Blur.ExternalMethodException", true);
+            MethodReference emeCtor = new MethodReference(".ctor", TargetModuleDefinition.TypeSystem.Void, emeType);
 
-            emeCtor = assembly.MainModule.ImportReference(emeCtor);
+            emeCtor = TargetModuleDefinition.ImportReference(emeCtor);
 
-            foreach (TypeDefinition type in assembly.MainModule.GetTypes())
+            foreach (TypeDefinition type in TargetModuleDefinition.GetTypes())
             {
                 foreach (MethodDefinition method in type.Methods)
                 {

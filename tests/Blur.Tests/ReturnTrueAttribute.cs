@@ -17,6 +17,7 @@ namespace Blur.Tests
         /// <summary>
         /// Replaces the body of this method by <c>return <see langword="true"/></c>.
         /// </summary>
+        [Debug]
         public void Apply(MethodReturnType returnType, MethodDefinition method)
         {
             if (!method.IsExtern())

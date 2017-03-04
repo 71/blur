@@ -135,7 +135,7 @@ namespace Blur
                 initialVarsCount   = variables.Count;
 
             var bodyReturnType = body.Method.ReturnType;
-            if (bodyReturnType?.DeclaringType?.FullName == "Blur.Context")
+            if (bodyReturnType.DeclaringType?.FullName == "Blur.Context")
                 bodyReturnType = ((GenericInstanceType)bodyReturnType).GenericArguments[0];
             var returnsVoid    = bodyReturnType.FullName == "System.Void";
 

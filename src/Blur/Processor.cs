@@ -94,10 +94,10 @@ namespace Blur.Processing
             string symbolsPath;
 
             if (File.Exists(symbolsPath = Path.ChangeExtension(assemblyPath, ".pdb")))
-                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite);
+                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
 
             else if (File.Exists(symbolsPath = Path.ChangeExtension(symbolsPath, ".mdb")))
-                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite);
+                SymbolStream = File.Open(symbolsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace Blur.Processing
 
             // Load the assembly.
 #if NET_CORE
-            Assembly = AssemblyLoadContext.Default.LoadFromStream(assemblyStream);
+            Assembly = AssemblyLoadContext.Default.LoadFromStream(TargetStream);
 #else
             byte[] assemblyBytes = new byte[TargetStream.Length];
 
@@ -164,7 +164,7 @@ namespace Blur.Processing
                 ProcessorType = GetRemoteProcessor();
 
             ProcessorType.GetMethod(PROCESSOR_PREPROCESS, BindingFlags.Static | BindingFlags.Public)
-                         .Invoke(null, new object[] { TargetStream });
+                         .Invoke(null, new object[] { TargetStream, SymbolStream });
         }
         #endregion
 

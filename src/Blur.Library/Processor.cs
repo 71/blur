@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using Mono.Cecil;
 using System.Linq;
+using System.Text;
 using Mono.Cecil.Cil;
 
 // This file defines the internal Blur processor.
@@ -34,6 +35,10 @@ namespace Blur
 
         public static Action<string, bool> LogMessage;
 #pragma warning restore CS0649
+
+        public static readonly ISymbolWriterProvider WriterProvider = new PortablePdbWriterProvider();
+        public static readonly ISymbolReaderProvider ReaderProvider = new PortablePdbReaderProvider();
+        public static readonly AssemblyResolver AssemblyResolver    = new AssemblyResolver();
 
         /// <summary>
         /// Process the given assembly.
@@ -66,7 +71,7 @@ namespace Blur
                     {
                         Assembly.Load(new AssemblyName(anRef.FullName));
                     }
-                    catch (Exception)
+                    catch
                     {
                         // If it happens, it shouldn't matter much.
                     }
@@ -98,7 +103,7 @@ namespace Blur
                     CleanUp();
 
                 // Save assembly.
-                SaveAssembly(TargetDefinition, targetStream);
+                SaveAssembly(targetStream);
             }
         }
 
@@ -249,45 +254,61 @@ namespace Blur
 
 
         #region Utils
-        // TODO: Fix symbols loading.
-        // Right now, Mono.Cecil throws when reading symbols in the tests, which is why
-        // we're not doing it.
-
         private static AssemblyDefinition ReadAssembly(Stream assemblyStream)
         {
             assemblyStream.Position = 0;
 
-            return AssemblyDefinition.ReadAssembly(assemblyStream, /*SymbolsStream == null
-                ? */new ReaderParameters
+            if (SymbolsStream != null)
+            {
+                try
                 {
-                    InMemory = true,
-                    ReadWrite = true,
-                    AssemblyResolver = new AssemblyResolver()
-                }/* : new ReaderParameters
+                    return AssemblyDefinition.ReadAssembly(assemblyStream, new ReaderParameters
+                    {
+                        InMemory = true,
+                        ReadWrite = true,
+                        AssemblyResolver = AssemblyResolver,
+                        SymbolStream = SymbolsStream,
+                        SymbolReaderProvider = ReaderProvider
+                    });
+                }
+                catch
                 {
-                    InMemory = true,
-                    ReadWrite = true,
-                    AssemblyResolver = new AssemblyResolver(),
-                    // ReadSymbols = true,
-                    // SymbolStream = SymbolsStream,
-                    // SymbolReaderProvider = new PortablePdbReaderProvider()
-                }*/);
+                    // Fallback to loading no symbols.
+                    assemblyStream.Position = 0;
+                }
+            }
+
+            return AssemblyDefinition.ReadAssembly(assemblyStream, new ReaderParameters
+            {
+                InMemory = true,
+                ReadWrite = true,
+                AssemblyResolver = AssemblyResolver
+            });
         }
 
-        private static void SaveAssembly(AssemblyDefinition definition, Stream stream)
+        private static void SaveAssembly(Stream stream)
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream((int)stream.Length))
             {
-                definition.Write(ms,/* SymbolsStream == null
-                    ? */new WriterParameters()
-                    /*: new WriterParameters
-                    {
-                        WriteSymbols = true,
-                        SymbolStream = SymbolsStream,
-                        SymbolWriterProvider = new PortablePdbWriterProvider()
-                    }*/);
+                stream.Position = 0;
 
-                stream.SetLength(0);
+                if (SymbolsStream != null && TargetDefinition.MainModule.HasSymbols)
+                {
+                    SymbolsStream.Position = 0;
+
+                    TargetDefinition.Write(ms, new WriterParameters
+                    {
+                        SymbolStream = SymbolsStream,
+                        SymbolWriterProvider = WriterProvider
+                    });
+                }
+                else
+                {
+                    TargetDefinition.Write(ms, new WriterParameters());
+                }
+
+                if (stream.Length > ms.Length)
+                    stream.SetLength(ms.Length);
 
                 ms.Position = 0;
                 ms.CopyTo(stream);

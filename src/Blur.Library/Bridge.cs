@@ -1,7 +1,5 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Mono.Cecil;
 
 namespace Blur
@@ -10,7 +8,7 @@ namespace Blur
     /// This class contains static methods giving access
     /// to the build process, and some data.
     /// </summary>
-    public static class Blur
+    public static class Bridge
     {
         /// <summary>
         /// Gets the <see cref="Assembly"/> that is being modified.
@@ -34,7 +32,7 @@ namespace Blur
         /// <summary>
         /// Debugs the code currently running.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerStepThrough]
         public static void Debug()
         {
             if (Debugger.IsAttached)

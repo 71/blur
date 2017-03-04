@@ -31,14 +31,20 @@ namespace Blur.Tests.Library
             ILWriter writer = method.Write();
             writer.ForEach(ins =>
             {
-                // Add runtime check.
                 if (ins.OpCode == OpCodes.Ret)
+                {
+                    // Check if we're returning null during compilation.
+                    if (ins?.Previous.OpCode.Code == Code.Ldnull)
+                        throw new Exception("Cannot return null from a [NotNull] method.");
+                    
+                    // Add runtime check.
                     writer.Before(ins)
                           .Dup()
                           .IfNull()
                               .Pop()
                               .Throw<ArgumentNullException>("return value")
                           .End();
+                }
             });
         }
 

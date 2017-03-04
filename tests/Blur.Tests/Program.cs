@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Blur.Tests.Library;
 using Shouldly;
+
+// ReSharper disable All
+//
+// We have quite a few weird properties and methods in this file,
+// and that's normal. However that doesn't make ReSharper happy. It's okay.
 
 namespace Blur.Tests
 {
@@ -33,8 +39,9 @@ namespace Blur.Tests
 
             cctor.Write().ForEach(ins =>
             {
-                if (ins.OpCode == OpCodes.Stsfld && (ins.Operand as FieldDefinition).Name == nameof(HasBeenModified)
-                 && ins.Previous.OpCode == OpCodes.Ldc_I4_0)
+                if (ins.OpCode.Code == Code.Stsfld
+                && (ins.Operand as FieldDefinition).Name == nameof(HasBeenModified)
+                && (ins.Previous?.OpCode.Code == Code.Ldc_I4_0))
                     ins.Previous.OpCode = OpCodes.Ldc_I4_1;
             });
         }
@@ -42,6 +49,8 @@ namespace Blur.Tests
         [BlockMethod]
         static void Main(string[] args)
         {
+            Debugger.Launch();
+
             Should.Throw<ArgumentNullException>(() => GetStringLength(null));
             Should.Throw<ArgumentNullException>(() => GetNull());
 
