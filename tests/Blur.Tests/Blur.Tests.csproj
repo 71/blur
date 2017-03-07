@@ -82,6 +82,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReturnTrueAttribute.cs" />
+    <Compile Include="TestAdvices.cs" />
     <Compile Include="TestExpressions.cs" />
   </ItemGroup>
   <ItemGroup>

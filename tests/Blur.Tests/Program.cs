@@ -57,6 +57,10 @@ namespace Blur.Tests
             TestExpressions.Add(1, 2).ShouldBe(3);
             TestExpressions.Greatest(1, 2).ShouldBe(2);
 
+            TestAdvices.ReturnValue(true).ShouldBeTrue();
+            TestAdvices.ReturnValue(false).ShouldBeTrue();
+            TestAdvices.ReturnValue("hello").ShouldBe("hello");
+
             ReturnTrue().ShouldBe(true);
             HasBeenModified.ShouldBe(true);
 

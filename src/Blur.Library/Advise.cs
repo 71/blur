@@ -21,7 +21,7 @@ namespace Blur.Advices
 
         private enum AdviceMember
         {
-            None = 0, Method, Target, Arguments, Invoke
+            None = 0, Method, Target, Arguments, Invoke, Return
         }
 
         private static AdviceMember AccessedMethod(MethodDefinition method)
@@ -33,21 +33,27 @@ namespace Blur.Advices
             {
                 case nameof(Invoke):
                     return AdviceMember.Invoke;
+                case nameof(Return):
+                    return AdviceMember.Return;
+
                 case "get_" + nameof(Arguments):
                     return AdviceMember.Arguments;
                 case "get_" + nameof(Target):
                     return AdviceMember.Target;
                 case "get_" + nameof(Method):
                     return AdviceMember.Method;
+
                 default:
                     return AdviceMember.None;
             }
         }
 
         /// <summary>
-        /// 
+        /// Change the content of the specified <paramref name="method"/>.
         /// </summary>
-        public static void Advise(MethodDefinition method, Action modifier)
+        /// <param name="method">The method whose body will be replaced.</param>
+        /// <param name="modifier">The new body of the method. In this body, calls to all <see cref="Advice"/> members can be made.</param>
+        public static void Advise(this MethodDefinition method, Action modifier)
         {
             MethodDefinition modifierDefinition = modifier?.GetMethodInfo().GetDefinition();
 
@@ -118,6 +124,11 @@ namespace Blur.Advices
                         ins.OpCode = OpCodes.Ldloc;
                         ins.Operand = argsVar;
                         break;
+                    case AdviceMember.Return:
+                        // ret
+                        ins.OpCode = OpCodes.Ret;
+                        ins.Operand = null;
+                        break;
                     case AdviceMember.Invoke:
                     {
                         // Put all objects in the array at the top of the stack
@@ -169,5 +180,10 @@ namespace Blur.Advices
         /// and returns its result.
         /// </summary>
         public static object Invoke(params object[] args) => null;
+
+        /// <summary>
+        /// Returns the given value.
+        /// </summary>
+        public static void Return(object obj) { }
     }
 }

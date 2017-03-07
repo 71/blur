@@ -227,6 +227,9 @@ namespace Blur
         /// </summary>
         public static TypeReference GetReference(this TypeInfo type)
         {
+            if (type.IsArray)
+                return new ArrayType(type.GetElementType().GetReference());
+
             TypeReference reference;
             if (Processor.TargetModuleDefinition.TryGetTypeReference(type.FullName, out reference))
                 return reference;
