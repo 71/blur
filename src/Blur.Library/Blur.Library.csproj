@@ -18,7 +18,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\build\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -39,9 +39,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\items\AssemblyVersion.cs" />
+    <Compile Include="Advise.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Attributes\Debug.cs" />
-    <Compile Include="Blur.cs" />
+    <Compile Include="Bridge.cs" />
     <Compile Include="BlurAttribute.cs" />
     <Compile Include="BlurExtensions.cs" />
     <Compile Include="BlurExtensions.Emit.cs" />

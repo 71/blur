@@ -199,6 +199,9 @@ namespace Blur
         /// </summary>
         internal void CopyTo(MethodBody body)
         {
+            for (int i = 0; i < variables.Count; i++)
+                body.Variables.Add(variables[i]);
+
             for (int i = 0; i < instructions.Count; i++)
                 body.Instructions.Add(instructions[i]);
         }

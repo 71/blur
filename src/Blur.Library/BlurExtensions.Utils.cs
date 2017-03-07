@@ -40,16 +40,20 @@ namespace Blur
         /// Returns whether or not the given <paramref name="type"/>
         /// implements the interface <typeparamref name="T"/>.
         /// </summary>
-        public static bool Implements<T>(this TypeDefinition type)
-        {
-            string toCompare = typeof(T).FullName;
+        public static bool Implements<T>(this TypeDefinition type) => type.Implements(typeof(T));
 
+        /// <summary>
+        /// Returns whether or not the given <paramref name="type"/>
+        /// implements the given interface.
+        /// </summary>
+        public static bool Implements(this TypeDefinition type, Type interfaceType)
+        {
             while (type != null)
             {
                 var interfaces = type.Interfaces;
 
                 for (int i = 0; i < interfaces.Count; i++)
-                    if (interfaces[i].InterfaceType.FullName == toCompare)
+                    if (interfaces[i].InterfaceType.Is(interfaceType, false))
                         return true;
 
                 type = type.BaseType?.Resolve();

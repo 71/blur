@@ -25,12 +25,12 @@
         
         <dependencies>
             <group>
-                <dependency id="Mono.Cecil" version="0.10.0-beta2" />
+                <dependency id="Mono.Cecil" version="0.10.0-beta4" />
                 <dependency id="System.Reflection.Emit.Lightweight" version="4.3.0" />
             </group>
             
             <group targetFramework=".NETStandard1.3">
-                <dependency id="Mono.Cecil" version="0.10.0-beta2" />
+                <dependency id="Mono.Cecil" version="0.10.0-beta4" />
                 
                 <dependency id="System.Diagnostics.Debug" version="4.3.0" />
                 <dependency id="System.Linq" version="4.3.0" />
@@ -42,7 +42,7 @@
             </group>
             
             <group targetFramework=".NETStandard1.5">
-                <dependency id="Mono.Cecil" version="0.10.0-beta2" />
+                <dependency id="Mono.Cecil" version="0.10.0-beta4" />
                 
                 <dependency id="System.Diagnostics.Debug" version="4.3.0" />
                 <dependency id="System.Linq" version="4.3.0" />

@@ -69,7 +69,7 @@ sealed class BlockMethodAttribute : Attribute, IMethodWeaver
                 // The following expression will write the following IL code:
                 //  call    string [mscorlib]System.Console::ReadLine()
                 //  pop
-                // Not that Call() automatically inserts this if the method is
+                // Note that Call() automatically inserts 'this' if the method is
                 // an instance method, and uses Callvirt if needed.
                 writer
                     .Before(ins)            // Position writer before the given instruction

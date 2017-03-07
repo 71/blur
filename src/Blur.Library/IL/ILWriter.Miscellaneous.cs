@@ -1,7 +1,6 @@
 ﻿using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Blur.Extensions;
 
 namespace Blur
 {
@@ -68,14 +67,43 @@ namespace Blur
         }
         #endregion
 
-        #region Cast
+        #region Box / Unbox / Cast
+        /// <summary>
+        /// Boxes the value at the top of the stack from <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Box(TypeReference type) => this.Emit(OpCodes.Box, type);
+
+        /// <summary>
+        /// Boxes the value at the top of the stack from <typeparamref name="T"/>.
+        /// </summary>
+        public ILWriter Box<T>() => this.Box(typeof(T).GetReference());
+
+        /// <summary>
+        /// Boxes the value at the top of the stack from <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Box(Type type) => this.Box(type.GetReference());
+
+
+        /// <summary>
+        /// Unboxes the value at the top of the stack to <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Unbox(TypeReference type) => this.Emit(type.IsValueType ? OpCodes.Unbox_Any : OpCodes.Unbox, type);
+
+        /// <summary>
+        /// Unboxes the value at the top of the stack to <typeparamref name="T"/>.
+        /// </summary>
+        public ILWriter Unbox<T>() => this.Unbox(typeof(T).GetReference());
+
+        /// <summary>
+        /// Unboxes the value at the top of the stack to <paramref name="type"/>.
+        /// </summary>
+        public ILWriter Unbox(Type type) => this.Unbox(type.GetReference());
+
+
         /// <summary>
         /// Casts the value at the top of the stack to <paramref name="type"/>.
         /// </summary>
-        public ILWriter Cast(TypeReference type)
-        {
-            return type.IsValueType ? this.Unbox_Any(type) : this.Castclass(type);
-        }
+        public ILWriter Cast(TypeReference type) => this.Emit(type.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, type);
 
         /// <summary>
         /// Casts the value at the top of the stack to <typeparamref name="T"/>.

@@ -9,7 +9,9 @@ namespace Blur
 {
     partial class ILWriter
     {
-        #region Load*
+        #region Get / Set / Load / Save
+
+        #region Arguments
         /// <summary>
         /// Load the argument at the specified <paramref name="position"/>.
         /// </summary>
@@ -33,20 +35,30 @@ namespace Blur
         }
 
         /// <summary>
+        /// Load the argument referenced by the given <paramref name="parameter"/>.
+        /// </summary>
+        public ILWriter LoadArg(ParameterDefinition parameter) => this.Emit(OpCodes.Ldarg, parameter);
+
+        /// <summary>
         /// Load the address of the argument at the specified <paramref name="position"/>.
         /// </summary>
         public ILWriter LoadArgAddress(int position)
             => position < byte.MaxValue
                 ? this.Emit(OpCodes.Ldarga_S, (byte)position)
                 : this.Emit(OpCodes.Ldarga, position);
-        #endregion
 
-        #region Load / Save
+        /// <summary>
+        /// Load the address of the argument referenced by the given <paramref name="parameter"/>.
+        /// </summary>
+        public ILWriter LoadArgAddress(ParameterDefinition parameter) => this.Emit(OpCodes.Ldarga, parameter);
+
         /// <summary>
         /// Load <see langword="this"/>.
         /// </summary>
         public ILWriter This() => this.Emit(OpCodes.Ldarg_0);
+        #endregion
 
+        #region Fields
         /// <summary>
         /// Load a <paramref name="field"/>'s value to the stack.
         /// <para>
@@ -54,23 +66,8 @@ namespace Blur
         /// Otherwise, <see cref="OpCodes.Ldfld"/> will be used, and <see langword="this"/> will be loaded first-hand.
         /// </para>
         /// </summary>
-        public ILWriter Load(FieldDefinition field)
+        public ILWriter Get(FieldDefinition field)
             => field.IsStatic ? this.Emit(OpCodes.Ldsfld, field) : this.This().Emit(OpCodes.Ldfld, field);
-
-        /// <summary>
-        /// Load a <paramref name="property"/>'s value to the stack.
-        /// <para>
-        /// If the property is <see langword="static"/>, <see cref="OpCodes.Call"/> will be used.
-        /// Otherwise, <see cref="OpCodes.Callvirt"/> will be used, and <see langword="this"/> will be loaded first-hand.
-        /// </para>
-        /// </summary>
-        public ILWriter Load(PropertyDefinition property)
-            => property.IsStatic() ? this.Emit(OpCodes.Call, property.GetMethod) : this.This().Emit(OpCodes.Callvirt, property.GetMethod);
-
-        /// <summary>
-        /// Load a <paramref name="method"/> reference to the stack.
-        /// </summary>
-        public ILWriter Load(MethodReference method) => this.Emit(OpCodes.Ldftn, method);
 
         /// <summary>
         /// Save the value at the top of the stack
@@ -80,7 +77,7 @@ namespace Blur
         /// Otherwise, <see cref="OpCodes.Callvirt"/> will be used, and <see langword="this"/> will be loaded first-hand.
         /// </para>
         /// </summary>
-        public ILWriter Save(FieldDefinition field)
+        public ILWriter Set(FieldDefinition field)
         {
             if (field.IsStatic)
                 return this.Emit(OpCodes.Stsfld, field);
@@ -97,6 +94,18 @@ namespace Blur
                 throw new InvalidOperationException("Invalid body.");
             }
         }
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// Load a <paramref name="property"/>'s value to the stack.
+        /// <para>
+        /// If the property is <see langword="static"/>, <see cref="OpCodes.Call"/> will be used.
+        /// Otherwise, <see cref="OpCodes.Callvirt"/> will be used, and <see langword="this"/> will be loaded first-hand.
+        /// </para>
+        /// </summary>
+        public ILWriter Get(PropertyDefinition property)
+            => property.IsStatic() ? this.Emit(OpCodes.Call, property.GetMethod) : this.This().Emit(OpCodes.Callvirt, property.GetMethod);
 
         /// <summary>
         /// Save the value at the top of the stack
@@ -106,7 +115,7 @@ namespace Blur
         /// Otherwise, <see cref="OpCodes.Callvirt"/> will be used, and <see langword="this"/> will be loaded first-hand.
         /// </para>
         /// </summary>
-        public ILWriter Save(PropertyDefinition property)
+        public ILWriter Set(PropertyDefinition property)
         {
             MethodDefinition setMethod = property.SetMethod;
 
@@ -125,6 +134,76 @@ namespace Blur
                 throw new InvalidOperationException("Invalid body.");
             }
         }
+        #endregion
+
+        #region Variables
+        /// <summary>
+        /// Adds the value of the given variable to the stack.
+        /// </summary>
+        public ILWriter Load(VariableDefinition variable) => this.Emit(OpCodes.Ldloc, variable);
+
+        /// <summary>
+        /// Adds the value of the variable at the given index to the stack.
+        /// </summary>
+        public ILWriter Load(int varIndex)
+        {
+            switch (varIndex)
+            {
+                case 0:
+                    return this.Ldloc_0();
+                case 1:
+                    return this.Ldloc_1();
+                case 2:
+                    return this.Ldloc_2();
+                case 3:
+                    return this.Ldloc_3();
+                default:
+                    return this.Emit(varIndex > byte.MaxValue ? OpCodes.Ldloc : OpCodes.Ldloc_S, varIndex);
+            }
+        }
+
+        /// <summary>
+        /// Saves the value at the top of the stack to the given variable.
+        /// </summary>
+        public ILWriter SaveTo(VariableDefinition variable) => this.Emit(OpCodes.Stloc, variable);
+
+        /// <summary>
+        /// Saves the value at the top of the stack to the variable at the given index.
+        /// </summary>
+        public ILWriter SaveTo(int varIndex)
+        {
+            switch (varIndex)
+            {
+                case 0:
+                    return this.Stloc_0();
+                case 1:
+                    return this.Stloc_1();
+                case 2:
+                    return this.Stloc_2();
+                case 3:
+                    return this.Stloc_3();
+                default:
+                    return this.Emit(varIndex > byte.MaxValue ? OpCodes.Stloc : OpCodes.Stloc_S, varIndex);
+            }
+        }
+        #endregion
+
+        #region Indexes
+        /// <summary>
+        /// Loads the item at the given index to the stack.
+        /// </summary>
+        public ILWriter LoadIndex(bool isValueType = false) => this.Emit(isValueType ? OpCodes.Ldelem_Any : OpCodes.Ldelem_Ref);
+
+        /// <summary>
+        /// Saves the item at the top of the stack to the given index.
+        /// </summary>
+        public ILWriter SaveToIndex(bool isValueType = false) => this.Emit(isValueType ? OpCodes.Stelem_Any : OpCodes.Stelem_Ref);
+        #endregion
+
+        /// <summary>
+        /// Load a <paramref name="method"/> reference to the stack.
+        /// </summary>
+        public ILWriter Load(MethodReference method) => this.Emit(OpCodes.Ldftn, method);
         #endregion
 
         #region Literal
@@ -657,6 +736,11 @@ namespace Blur
         /// Pop the value at the top of the stack.
         /// </summary>
         public ILWriter Pop() => this.Emit(OpCodes.Pop);
+
+        /// <summary>
+        /// Duplicate the value at the top of the stack.
+        /// </summary>
+        public ILWriter Dup() => this.Emit(OpCodes.Dup);
 
         /// <summary>
         /// Return from this function, optionally with the value at
