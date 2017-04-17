@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using Mono.Cecil;
 
 namespace Blur
@@ -24,12 +23,22 @@ namespace Blur
         /// <inheritdoc/>
         public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters)
         {
-            // Fix bad formatting of the fullname
-            Match m = Regex.Match(fullName, @"^(.+?),(.+?),(.+?),(.+?)(?=,)");
-            fullName = m.Success ? m.Value : fullName;
+            // Fix bad formatting of the fullname:
+            // Sometimes the "Version=, Culture=, PublicKeyToken=" part of the assembly
+            // appears more than once in the full name; keep only the first part.
+            for (int i = 0, commaCount = 0; i < fullName.Length; i++)
+            {
+                if (fullName[i] != ',')
+                    continue;
 
-            AssemblyDefinition assembly;
-            if (assembliesResolved.TryGetValue(fullName, out assembly))
+                if (++commaCount != 4)
+                    continue;
+
+                fullName = fullName.Substring(0, i);
+                break;
+            }
+
+            if (assembliesResolved.TryGetValue(fullName, out AssemblyDefinition assembly))
                 return assembly;
 
             Stream targetStream = Processor.GetAssemblyStream(fullName);

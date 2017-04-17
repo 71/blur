@@ -56,6 +56,24 @@ namespace Blur
             return this;
         }
 
+        /// <summary>
+        /// Executes the given <paramref name="action"/> on every
+        /// <see cref="Instruction"/> in this <see cref="ILWriter"/>,
+        /// then returns <see langword="this"/>.
+        /// </summary>
+        /// <param name="action">The action to execute on every <see cref="Instruction"/>.</param>
+        /// <param name="index">Index at which the loop will start iterating.</param>
+        /// <remarks>
+        /// This method handles changes made to the method body
+        /// this writer represents, unlike a traditional <see langword="foreach"/> loop.
+        /// </remarks>
+        public ILWriter ForEach(Action<Instruction> action, ref int index)
+        {
+            this.ForEachInternal(action, ref index);
+
+            return this;
+        }
+
         private void ForEachInternal(Action<Instruction> action, ref int pos)
         {
             for (; pos < instructions.Count; pos++)

@@ -35,29 +35,27 @@ namespace Blur
         {
             try
             {
-                if (obj is TypeDefinition)
-                    this.Visit((TypeDefinition)obj);
-                else if (obj is PropertyDefinition)
-                    this.Visit((PropertyDefinition)obj);
-                else if (obj is FieldDefinition)
-                    this.Visit((FieldDefinition)obj);
-                else if (obj is EventDefinition)
-                    this.Visit((EventDefinition)obj);
-                else if (obj is MethodDefinition)
+                if (obj is TypeDefinition typeDef)
+                    this.Visit(typeDef);
+                else if (obj is PropertyDefinition propDef)
+                    this.Visit(propDef);
+                else if (obj is FieldDefinition fieldDef)
+                    this.Visit(fieldDef);
+                else if (obj is EventDefinition eventDef)
+                    this.Visit(eventDef);
+                else if (obj is MethodDefinition methodDef)
                 {
-                    MethodDefinition method = (MethodDefinition)obj;
+                    foreach (ParameterDefinition parameterDef in methodDef.Parameters)
+                        this.Visit(parameterDef, methodDef);
 
-                    foreach (ParameterDefinition parameter in method.Parameters)
-                        this.Visit(parameter, method);
-
-                    this.Visit(method);
+                    this.Visit(methodDef);
                 }
-                else if (obj is AssemblyDefinition)
-                    this.Visit((AssemblyDefinition)obj);
+                else if (obj is AssemblyDefinition assemblyDef)
+                    this.Visit(assemblyDef);
             }
             catch (Exception e)
             {
-                throw new Exception($"Error encountered by {this.GetType()} whilst visiting {obj.GetType()}.", e);
+                throw new Exception($"Error encountered by {this.GetType()} whilst visiting {obj}.", e);
             }
         }
 

@@ -21,11 +21,12 @@ namespace Blur.Processing
 
         public bool Preprocess { get; set; }
 
+        public bool Debug { get; set; }
+
         public override bool Execute()
         {
-#if DEBUG
-            Debugger.Launch();
-#endif
+            if (Debug)
+                Debugger.Launch();
 
             try
             {

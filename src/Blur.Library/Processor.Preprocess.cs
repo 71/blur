@@ -69,6 +69,9 @@ namespace Blur
                         // to all weavers. But right now, only the Debug attribute needs it.
                         DebugAttribute debugAttr = debugAttrData.CreateInstance<DebugAttribute>();
                         debugAttr.Apply(method);
+
+                        // Remove attribute
+                        method.CustomAttributes.Remove(debugAttrData);
                     }
                 }
             }

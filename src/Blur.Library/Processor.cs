@@ -200,6 +200,23 @@ namespace Blur
         }
 
         /// <summary>
+        /// Field used to store methods that will be deleted during clean-up.
+        /// </summary>
+        private static readonly Stack<MethodDefinition> MarkedForDeletion = new Stack<MethodDefinition>();
+
+        /// <summary>
+        /// Mark a method for deletion.
+        /// When cleaning up, this method will be removed.
+        /// If its declaring type no longer declares a method, it
+        /// will be removed as well.
+        /// </summary>
+        public static void MarkForDeletion(MethodDefinition method)
+        {
+            if (!MarkedForDeletion.Contains(method))
+                MarkedForDeletion.Push(method);
+        }
+
+        /// <summary>
         /// Clean up declarations, references and visitors in an assembly.
         /// </summary>
         /// <remarks>
@@ -250,6 +267,24 @@ namespace Blur
                     references.RemoveAt(i--);
                 }
             }
+
+            // Remove methods marked for deletion.
+            foreach (MethodDefinition method in MarkedForDeletion)
+            {
+                TypeDefinition declaringType = method.DeclaringType;
+
+                declaringType.Methods.Remove(method);
+
+                if (declaringType.Methods.Count == 0)
+                {
+                    // If the type no longer stores methods,
+                    // it can be safely deleted.
+                    if (declaringType.DeclaringType != null)
+                        declaringType.DeclaringType.NestedTypes.Remove(declaringType);
+                    else
+                        declaringType.Module.Types.Remove(declaringType);
+                }
+            }
         }
 
 
@@ -268,7 +303,8 @@ namespace Blur
                         ReadWrite = true,
                         AssemblyResolver = AssemblyResolver,
                         SymbolStream = SymbolsStream,
-                        SymbolReaderProvider = ReaderProvider
+                        SymbolReaderProvider = ReaderProvider,
+                        MetadataResolver = new MetadataResolver(AssemblyResolver)
                     });
                 }
                 catch
@@ -282,7 +318,8 @@ namespace Blur
             {
                 InMemory = true,
                 ReadWrite = true,
-                AssemblyResolver = AssemblyResolver
+                AssemblyResolver = AssemblyResolver,
+                MetadataResolver = new MetadataResolver(AssemblyResolver)
             });
         }
 

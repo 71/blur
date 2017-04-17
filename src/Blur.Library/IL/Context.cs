@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
 
 namespace Blur
 {
@@ -16,154 +15,114 @@ namespace Blur
     public static class Context
     {
         #region Classes
-        internal interface IContextObj
+        public abstract class Any
         {
-            /// <summary>
-            /// Gets the type of the value that'll be returned.
-            /// </summary>
-            Type ObjectType { get; }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            Instruction GetInstruction(ILWriter il);
+            public virtual Type ReturnType => typeof(void);
+            public abstract Instruction[] GetInstructions(ILWriter il);
         }
 
-        /// <summary>
-        /// Represents a local argument (or parameter).
-        /// </summary>
-        /// <typeparam name="T">The type of the argument.</typeparam>
-        public struct ContextArgument<T> : IContextObj
+        public abstract class Any<T> : Any
         {
-            internal int NthArgument;
-            internal string ArgumentName;
+            public sealed override Type ReturnType => typeof(T);
 
-            /// <summary>
-            /// Returns the value of the argument.
-            /// </summary>
-            public T Value;
+            public static implicit operator Any<T>(T val) => new Constant<T>(val);
+        }
 
-            /// <inheritdoc/> 
-            public Type ObjectType => typeof(T);
+        private sealed class Constant<T> : Any<T>
+        {
+            private readonly T Value;
 
-            /// <inheritdoc cref="Value"/> 
-            public static implicit operator T(ContextArgument<T> obj) => obj.Value;
+            internal Constant(T val)
+            {
+                if (!ILWriter.IsConstant<T>())
+                    throw new InvalidOperationException($"Cannot convert {typeof(T)} to a constant.");
 
-            internal ContextArgument(int nth)
+                Value = val;
+            }
+
+            public override Instruction[] GetInstructions(ILWriter il)
+            {
+                return ILWriter.InstructionsForConstant(Value);
+            }
+        }
+
+        private sealed class Arg<T> : Any<T>
+        {
+            private readonly int NthArgument;
+            private readonly ParameterDefinition Parameter;
+
+            internal Arg(int nth)
             {
                 NthArgument = nth;
-                ArgumentName = null;
-                Value = default(T);
             }
 
-            internal ContextArgument(string name)
+            internal Arg(ParameterDefinition parameter)
             {
-                NthArgument = -1;
-                ArgumentName = name;
-                Value = default(T);
+                Parameter = parameter;
             }
 
-            internal ContextArgument<T> Verify()
+            public override Instruction[] GetInstructions(ILWriter il)
             {
-                if (!ILWriter.IsConstant<T>())
-                    throw new InvalidOperationException($"Cannot convert {typeof(T)} to a constant.");
-                return this;
-            }
-
-            /// <inheritdoc/> 
-            public Instruction GetInstruction(ILWriter il)
-            {
-                string name = ArgumentName;
-                ParameterDefinition parameter = ArgumentName == null
-                    ? il.parameters[NthArgument]
-                    : il.parameters.First(x => x.Name == name);
-
-                Instruction ins = Instruction.Create(OpCodes.Ldarg, parameter);
-                ILWriter.FixLdargFor(parameter, ins);
-
-                return ins;
+                return new[] { Instruction.Create(OpCodes.Ldarg, Parameter ?? il.parameters[NthArgument]) };
             }
         }
 
-        /// <summary>
-        /// Represents a local variable.
-        /// </summary>
-        /// <typeparam name="T">The type of the variable.</typeparam>
-        public struct ContextVariable<T> : IContextObj
+        private sealed class Var<T> : Any<T>
         {
-            internal int NthVariable;
+            private readonly int NthVariable;
+            private readonly VariableDefinition Variable;
 
-            /// <summary>
-            /// Returns the value of the local variable.
-            /// </summary>
-            public T Value;
-
-            /// <inheritdoc/> 
-            public Type ObjectType => typeof(T);
-
-            /// <inheritdoc cref="Value"/>
-            public static implicit operator T(ContextVariable<T> obj) => obj.Value;
-
-            internal ContextVariable(int nth)
+            internal Var(int nth)
             {
                 NthVariable = nth;
-                Value = default(T);
             }
 
-            internal ContextVariable<T> Verify()
+            internal Var(VariableDefinition variable)
             {
-                if (!ILWriter.IsConstant<T>())
-                    throw new InvalidOperationException($"Cannot convert {typeof(T)} to a constant.");
-                return this;
+                Variable = variable;
             }
 
-            /// <inheritdoc/> 
-            public Instruction GetInstruction(ILWriter il)
+            public override Instruction[] GetInstructions(ILWriter il)
             {
-                switch (NthVariable)
-                {
-                    case 0:
-                        return Instruction.Create(OpCodes.Ldloc_0);
-                    case 1:
-                        return Instruction.Create(OpCodes.Ldloc_1);
-                    case 2:
-                        return Instruction.Create(OpCodes.Ldloc_2);
-                    case 3:
-                        return Instruction.Create(OpCodes.Ldloc_3);
-                    default:
-                        return Instruction.Create(NthVariable > sbyte.MaxValue ? OpCodes.Ldloc : OpCodes.Ldloc_S, il.variables[NthVariable]);
-                }
+                return new[] { Instruction.Create(OpCodes.Ldarg, Variable ?? il.variables[NthVariable]) };
             }
         }
 
-        /// <summary>
-        /// Represents <see langword="this"/>.
-        /// </summary>
-        /// <typeparam name="T">The declaring type of the method in which the context is retrieved.</typeparam>
-        public struct ContextThis<T> : IContextObj
+        private sealed class Arg0<T> : Any<T>
         {
-            /// <summary>
-            /// Returns the value of the current object.
-            /// </summary>
-            public T Value;
-
-            /// <inheritdoc/>
-            public Type ObjectType => typeof(T);
-
-            /// <inheritdoc cref="Value"/>
-            public static implicit operator T(ContextThis<T> obj) => obj.Value;
-
-            internal ContextThis<T> Verify()
+            public override Instruction[] GetInstructions(ILWriter il)
             {
-                if (!ILWriter.IsConstant<T>())
-                    throw new InvalidOperationException($"Cannot convert {typeof(T)} to a constant.");
-                return this;
+                return new[] { Instruction.Create(OpCodes.Ldarg_0) };
+            }
+        }
+
+        private sealed class Instr<T> : Any<T>
+        {
+            private readonly Instruction[] Instructions;
+
+            internal Instr(Instruction[] toPrint)
+            {
+                Instructions = toPrint;
             }
 
-            /// <inheritdoc/>
-            public Instruction GetInstruction(ILWriter il)
+            public override Instruction[] GetInstructions(ILWriter il)
             {
-                return Instruction.Create(OpCodes.Ldarg_0);
+                return Instructions;
+            }
+        }
+
+        private sealed class Instr : Any
+        {
+            private readonly Instruction[] Instructions;
+
+            internal Instr(Instruction[] toPrint)
+            {
+                Instructions = toPrint;
+            }
+
+            public override Instruction[] GetInstructions(ILWriter il)
+            {
+                return Instructions;
             }
         }
         #endregion
@@ -172,53 +131,75 @@ namespace Blur
         /// <inheritdoc cref="This"/>
         /// <typeparam name="T">The declaring type of the method to rewrite.</typeparam>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextThis<T> This<T>() => new ContextThis<T>().Verify();
+        public static Any<T> This<T>() => new Arg0<T>();
 
         /// <summary>
         /// In an instance method, returns <see langword="this"/>.
         /// </summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextThis<object> This() => new ContextThis<object>();
+        public static Any<object> This() => new Arg0<object>();
         #endregion
 
         #region Argument
         /// <inheritdoc cref="Argument(int)"/>
         /// <typeparam name="T">The type of the argument.</typeparam>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextArgument<T> Argument<T>(int position) => new ContextArgument<T>(position).Verify();
-
-        /// <inheritdoc cref="Argument(string)"/>
-        /// <typeparam name="T">The type of the argument.</typeparam>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextArgument<T> Argument<T>(string argName) => new ContextArgument<T>(argName).Verify();
+        public static Any<T> Argument<T>(int position) => new Arg<T>(position);
 
         /// <summary>
         /// Gets the argument at the given <paramref name="position"/>.
         /// </summary>
         /// <param name="position">The 0-based index of the argument.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextArgument<object> Argument(int position) => new ContextArgument<object>(position);
+        public static Any<object> Argument(int position) => new Arg<object>(position);
+
+        /// <inheritdoc cref="Argument(ParameterDefinition)"/>
+        /// <typeparam name="T">The type of the argument.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static Any<T> Argument<T>(ParameterDefinition parameter) => new Arg<T>(parameter);
 
         /// <summary>
-        /// Gets the argument whose name is <paramref name="argName"/>.
+        /// Gets the argument representend by the given <paramref name="parameter"/>.
         /// </summary>
-        /// <param name="argName">The name of the argument.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextArgument<object> Argument(string argName) => new ContextArgument<object>(argName);
+        public static Any<object> Argument(ParameterDefinition parameter) => new Arg<object>(parameter);
         #endregion
 
         #region Variable
         /// <inheritdoc cref="Variable(int)"/>
         /// <typeparam name="T">The type of the variable.</typeparam>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextVariable<T> Variable<T>(int position) => new ContextVariable<T>(position).Verify();
+        public static Any<T> Variable<T>(int position) => new Var<T>(position);
 
         /// <summary>
         /// Gets the variable at the given <paramref name="position"/>.
         /// </summary>
         /// <param name="position">The 0-based index of the variable.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ContextVariable<object> Variable(int position) => new ContextVariable<object>(position);
+        public static Any<object> Variable(int position) => new Var<object>(position);
+
+        /// <inheritdoc cref="Variable(VariableDefinition)"/>
+        /// <typeparam name="T">The type of the variable.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static Any<T> Variable<T>(VariableDefinition variable) => new Var<T>(variable);
+
+        /// <summary>
+        /// Gets the variable represented by the given <paramref name="variable"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static Any<object> Variable(VariableDefinition variable) => new Var<object>(variable);
+        #endregion
+
+        #region Instructions
+        /// <summary>
+        /// Prints the given instructions.
+        /// </summary>
+        public static Any<T> Instructions<T>(params Instruction[] instructions) => new Instr<T>(instructions);
+
+        /// <summary>
+        /// Prints the given instructions.
+        /// </summary>
+        public static Any Instructions(params Instruction[] instructions) => new Instr(instructions);
         #endregion
     }
 }

@@ -5,6 +5,16 @@ namespace Blur
 {
     partial class ILWriter
     {
+        private int IndexOf(Instruction instruction)
+        {
+            int index = instructions.IndexOf(instruction);
+
+            if (index == -1)
+                throw new ArgumentException("The given instruction is not a part of this ILWriter's body.", nameof(instruction));
+
+            return index;
+        }
+
         /// <summary>
         /// Updates an ldarg.* instruction to account for
         /// <see langword="static"/> methods.
@@ -100,7 +110,7 @@ namespace Blur
             }
         }
 
-        private static Instruction[] InstructionsFor(object obj)
+        internal static Instruction[] InstructionsForConstant(object obj)
         {
             if (obj == null)
                 return new[] { Instruction.Create(OpCodes.Ldnull) };

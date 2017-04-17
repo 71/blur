@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Blur.Tests.Debugging": {
+      "commandName": "Executable",
+      "executablePath": "D:\\Bytes\\Blur\\build\\Debug\\Blur.exe",
+      "commandLineArgs": "-p -o \"D:\\Bytes\\Blur\\build\\Tests\\Blur.Tests.Debugging.Blurry.exe\" \"D:\\Bytes\\Blur\\build\\Tests\\Blur.Tests.Debugging.exe\"",
+      "workingDirectory": "."
+    }
+  }
+}

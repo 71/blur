@@ -1,7 +1,7 @@
 ﻿{
   "supports": {},
   "dependencies": {
-    "Blur": "0.2.9-beta",
+    "Blur": "0.2.9-beta", 
     "Microsoft.NETCore.Portable.Compatibility": "1.0.1",
     "NETStandard.Library": "1.6.0"
   },

@@ -35,8 +35,8 @@ namespace Blur.Processing
         private static Stream SymbolStream;
         private static string TargetPath;
 
-        private static Assembly Assembly;
-        private static Assembly BlurLibrary;
+        internal static Assembly Assembly;
+        internal static Assembly BlurLibrary;
         private static Type ProcessorType;
 
         public static event Action<string> MessageLogged;
@@ -85,7 +85,17 @@ namespace Blur.Processing
             }
 
             if (BlurLibrary == null)
-                BlurLibrary = Assembly.Load(new AssemblyName("Blur.Library"));
+            {
+                try
+                {
+                    BlurLibrary = Assembly.Load(new AssemblyName("Blur.Library"));
+                }
+                catch
+                {
+                    string currentDir = Path.GetDirectoryName(typeof(Processor).Assembly.Location);
+                    BlurLibrary = Assembly.LoadFrom(Path.Combine(currentDir, "Blur.Library.dll"));
+                }
+            }
 
             // Load the assembly to modify.
             TargetStream = File.Open(copyPath, FileMode.Open, FileAccess.ReadWrite);
@@ -201,7 +211,10 @@ namespace Blur.Processing
         /// </summary>
         private static Type GetRemoteProcessor()
         {
-            Type processor = BlurLibrary.GetType(PROCESSOR_FULLNAME);
+            //foreach (var t in BlurLibrary.GetTypes())
+            //    Console.WriteLine($"type: {t}");
+
+            Type processor = BlurLibrary.GetType(PROCESSOR_FULLNAME, true);
 
             // Set the processor's "tunnel" functions.
             Func<Assembly[]> getAssemblies = AppDomain.CurrentDomain.GetAssemblies;
@@ -224,6 +237,10 @@ namespace Blur.Processing
                     return null;
                 }
             };
+
+            Console.WriteLine($"Enumerating fields from {processor}");
+            foreach (var fld in processor.GetRuntimeFields())
+                Console.WriteLine($"field: {fld}");
 
             processor.GetField(PROCESSOR_GETASSEMBLIES).SetValue(null, getAssemblies);
             processor.GetField(PROCESSOR_GETASSEMBLY).SetValue(null, getAssembly);

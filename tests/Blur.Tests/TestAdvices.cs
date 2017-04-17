@@ -1,15 +1,19 @@
-﻿using Mono.Cecil;
+﻿using System.Diagnostics.CodeAnalysis;
+using Mono.Cecil;
+using Shouldly;
+using Xunit;
 
 namespace Blur.Tests
 {
     using Advices;
 
-    static class TestAdvices
+    public static class TestAdvices
     {
         public static T ReturnValue<T>(T val) => val;
 
         [Mixin]
-        static void Mixin(TypeDefinition type)
+        [SuppressMessage("ReSharper", "UnusedMember.Local")]
+        private static void Mixin(TypeDefinition type)
         {
             MethodDefinition method = type.FindMethod(nameof(ReturnValue), null);
 
@@ -23,5 +27,15 @@ namespace Blur.Tests
                 Advice.Return(Advice.Invoke(Advice.Arguments));
             });
         }
+
+        #region Tests
+        [Fact]
+        public static void ReturnValueShouldReturnGivenValue()
+        {
+            ReturnValue(true).ShouldBeFalse();
+            ReturnValue(false).ShouldBeTrue();
+            ReturnValue("hello").ShouldBe("hello");
+        }
+        #endregion
     }
 }

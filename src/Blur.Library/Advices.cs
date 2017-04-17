@@ -24,7 +24,7 @@ namespace Blur.Advices
             None = 0, Method, Target, Arguments, Invoke, Return
         }
 
-        private static AdviceMember AccessedMethod(MethodDefinition method)
+        private static AdviceMember AccessedMethod(MethodReference method)
         {
             if (method.DeclaringType != AdviceReference)
                 return AdviceMember.None;
@@ -60,14 +60,20 @@ namespace Blur.Advices
             if (modifierDefinition == null)
                 throw new Exception("Invalid modifier");
 
+            Processor.MarkForDeletion(modifierDefinition);
+
             // Copy the method we're supposed to invoke to an hidden method.
             MethodDefinition old = new MethodDefinition($"$underlying_{method.Name}",
                 method.Attributes,
-                method.ReturnType);
+                method.ReturnType) { IsPrivate = true };
+
+            foreach (GenericParameter genParameter in method.GenericParameters)
+                old.GenericParameters.Add(new GenericParameter(genParameter.Name, genParameter.Owner));
 
             foreach (ParameterDefinition parameter in method.Parameters)
                 old.Parameters.Add(new ParameterDefinition(parameter.Name, parameter.Attributes, parameter.ParameterType));
 
+            method.DeclaringType.Methods.Add(old);
             method.Write().CopyTo(old.Body);
 
             // Rewrite the original method to invoke the context instead.
@@ -98,8 +104,7 @@ namespace Blur.Advices
             // Then, replace each call to Advice by something else.
             writer.ForEach(ins =>
             {
-                MethodDefinition target = (ins.Operand as MethodDefinition) ??
-                                          (ins.Operand as PropertyDefinition)?.GetMethod;
+                MethodReference target = ins.Operand as MethodReference;
 
                 if (target == null)
                     return;
@@ -145,10 +150,8 @@ namespace Blur.Advices
                         {
                             writer.Int(parameter.Index)
                                   .LoadIndex()
-                                  .Unbox(parameter.ParameterType);
+                                  .Cast(parameter.ParameterType);
                         }
-
-                        writer.Pop();
 
                         ins.OpCode = isStatic ? OpCodes.Call : OpCodes.Callvirt;
                         ins.Operand = old;
@@ -156,7 +159,7 @@ namespace Blur.Advices
                         break;
                     }
                 }
-            });
+            }, false);
         }
 
         /// <summary>

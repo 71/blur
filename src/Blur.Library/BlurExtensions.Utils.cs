@@ -241,9 +241,9 @@ namespace Blur
             if (operand is TypeReference)
                 return Instruction.Create(opcode, Processor.TargetModuleDefinition.ImportReference((TypeReference)operand));
             if (operand is VariableDefinition)
-                return Instruction.Create(opcode, (VariableDefinition)operand);
+                return Instruction.Create(opcode, ((VariableDefinition)operand).Clone());
             if (operand is ParameterDefinition)
-                return Instruction.Create(opcode, (ParameterDefinition)operand);
+                return Instruction.Create(opcode, ((ParameterDefinition)operand).Clone());
 
             throw new ArgumentException("Invalid instruction given.", nameof(instruction));
         }

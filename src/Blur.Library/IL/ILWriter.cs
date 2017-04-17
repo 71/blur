@@ -16,6 +16,7 @@ namespace Blur
     /// or <see langword="delegates"/> to IL.
     /// </para>
     /// </summary>
+    [SuppressMessage("ReSharper", "ParameterHidesMember", Justification = "Both the field and the parameter have clear names.")]
     public sealed partial class ILWriter
     {
         private readonly Lazy<ReadOnlyCollection<Instruction>> readOnlyInstructions;
@@ -57,13 +58,7 @@ namespace Blur
         /// Gets or sets the position of this <see cref="ILWriter"/>
         /// in the body being created.
         /// </summary>
-        public int Position
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set;
-        }
+        public int Position { get; set; }
 
         /// <summary>
         /// Method whose body is being modified.
@@ -89,7 +84,6 @@ namespace Blur
         /// Go to the given <paramref name="position"/>,
         /// and return <see langword="this"/>.
         /// </summary>
-        [SuppressMessage("ReSharper", "ParameterHidesMember", Justification = "Both the field and the parameter have clear names.")]
         public ILWriter To(int position)
         {
             if (position > instructions.Count)
@@ -98,6 +92,20 @@ namespace Blur
             this.position = position;
             return this;
         }
+
+        /// <summary>
+        /// Go to the given <paramref name="instruction"/>,
+        /// and return <see langword="this"/>.
+        /// </summary>
+        public ILWriter To(Instruction instruction) => this.To(this.IndexOf(instruction));
+
+        /// <inheritdoc cref="To(int)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ILWriter Move(int position) => this.To(position);
+
+        /// <inheritdoc cref="To(Instruction)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ILWriter Move(Instruction instruction) => this.To(instruction);
 
         /// <summary>
         /// Go to the end of the body being written,
@@ -164,23 +172,6 @@ namespace Blur
 
             return this;
         }
-
-        /// <summary>
-        /// Removes the given <paramref name="instruction"/>,
-        /// moves to its old position, and returns <see langword="this"/>.
-        /// </summary>
-        public ILWriter Replace(Instruction instruction)
-        {
-            int index = instructions.IndexOf(instruction);
-
-            if (index == -1)
-                throw new ArgumentException("The given instruction could not be found in the ILWriter.", nameof(instruction));
-
-            instructions.RemoveAt(index);
-            position = index;
-
-            return this;
-        } 
         #endregion
 
         /// <summary>
@@ -199,11 +190,7 @@ namespace Blur
         /// </summary>
         internal void CopyTo(MethodBody body)
         {
-            for (int i = 0; i < variables.Count; i++)
-                body.Variables.Add(variables[i]);
-
-            for (int i = 0; i < instructions.Count; i++)
-                body.Instructions.Add(instructions[i]);
+            Copy(this.Method.Body, body, body.Instructions.Count, null);
         }
     }
 }

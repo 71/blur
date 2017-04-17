@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="..\..\items\AssemblyVersion.cs" />
     <Compile Include="AssemblyResolver.cs" />
+    <Compile Include="FluentParser.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

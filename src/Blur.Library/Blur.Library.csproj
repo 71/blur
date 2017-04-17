@@ -39,7 +39,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\items\AssemblyVersion.cs" />
-    <Compile Include="Advise.cs" />
+    <Compile Include="Advices.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Attributes\Debug.cs" />
     <Compile Include="Bridge.cs" />
@@ -53,8 +53,11 @@
     <Compile Include="BlurVisitor.cs" />
     <Compile Include="BlurVisitor.Internal.cs" />
     <Compile Include="IL\BodyAnalysis.cs" />
+    <Compile Include="IL\Context - Copy.cs" />
     <Compile Include="IL\Context.cs" />
+    <Compile Include="IL\ILWriter.Blocks.cs" />
     <Compile Include="IL\ILWriter.Conditional.cs" />
+    <Compile Include="IL\ILWriter.Copy.cs" />
     <Compile Include="IL\ILWriter.cs" />
     <Compile Include="IL\ILWriter.Delegate.cs" />
     <Compile Include="IL\ILWriter.Delegates.cs">
@@ -68,6 +71,7 @@
     <Compile Include="IL\ILWriter.Miscellaneous.cs" />
     <Compile Include="IL\ILWriter.Move.cs" />
     <Compile Include="IL\ILWriter.Parse.cs" />
+    <Compile Include="IL\ILWriter.Replace.cs" />
     <Compile Include="IL\ILWriter.Reposition.cs" />
     <Compile Include="IL\ILWriter.Specialized.cs" />
     <Compile Include="IL\ILWriter.Utils.cs" />

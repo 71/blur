@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil;
-using Blur.Extensions;
+using Shouldly;
+using Xunit;
 
 namespace Blur.Tests
 {
-    static class TestExpressions
+    public static class TestExpressions
     {
         public static int Add(int a, int b)
         {
@@ -40,10 +37,21 @@ namespace Blur.Tests
             addMethod.Rewrite().Expression(expr);
 
             greatestMethod.Rewrite()
-                          .Delegate(Context.Argument<int>(0), Context.Argument<int>(1), (a, b) =>
-                          {
-                              return a > b ? a : b;
-                          });
+                          .Function(Context.Argument<int>(0), Context.Argument<int>(1), (a, b) => a > b ? a : b);
         }
+
+        #region Tests
+        [Fact]
+        public static void AddShouldWork()
+        {
+            Add(1, 2).ShouldBe(3);
+        }
+
+        [Fact]
+        public static void GreatestShouldReturnGreatest()
+        {
+            Greatest(1, 2).ShouldBe(2);
+        }
+        #endregion
     }
 }

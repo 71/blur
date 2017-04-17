@@ -4,25 +4,6 @@ namespace Blur
 {
     partial class ILWriter
     {
-        private Block currentBlock;
-
-        private class Block
-        {
-            public Block Parent { get; private set; }
-            public int Depth => IsRoot ? 0 : Parent.Depth + 1;
-            public bool IsRoot => Parent == null;
-
-            public int Start { get; private set; }
-            public bool IsInversed { get; private set; }
-
-            public Block(Block parent, int position, bool inversed)
-            {
-                this.Parent = parent;
-                this.Start = position;
-                this.IsInversed = inversed;
-            }
-        }
-
         /// <summary>
         /// Execute the following instructions if the value
         /// at the top of the stack is <see langword="true"/>.
@@ -32,8 +13,13 @@ namespace Blur
         /// </summary>
         public ILWriter If()
         {
-            currentBlock = new Block(currentBlock, position, false);
-            return this;
+            return this.PushBlock(block =>
+            {
+                OpCode opcode = position < byte.MaxValue ? OpCodes.Brfalse_S : OpCodes.Brfalse;
+
+                block.Start.OpCode = opcode;
+                block.Start.Operand = instructions[position++];
+            });
         }
 
         /// <summary>
@@ -45,25 +31,13 @@ namespace Blur
         /// </summary>
         public ILWriter Unless()
         {
-            currentBlock = new Block(currentBlock, position, true);
-            return this;
-        }
+            return this.PushBlock(block =>
+            {
+                OpCode opcode = position < byte.MaxValue ? OpCodes.Brtrue_S : OpCodes.Brtrue;
 
-        /// <summary>
-        /// End the block of a <see cref="If()"/> or <see cref="Unless()"/> call.
-        /// </summary>
-        public ILWriter End()
-        {
-            if (currentBlock == null)
-                throw new System.Exception("End can only be called following If or Unless.");
-
-            OpCode opcode = !currentBlock.IsInversed
-                ? (position < byte.MaxValue ? OpCodes.Brfalse_S : OpCodes.Brfalse)
-                : (position < byte.MaxValue ? OpCodes.Brtrue_S : OpCodes.Brtrue);
-
-            instructions.Insert(currentBlock.Start, Instruction.Create(opcode, instructions[position++]));
-            currentBlock = currentBlock.Parent;
-            return this;
+                block.Start.OpCode = opcode;
+                block.Start.Operand = instructions[position++];
+            });
         }
 
         /// <summary>

@@ -19,7 +19,7 @@
     <UsingTask TaskName="Blur.Processing.BlurTask" AssemblyFile="$(BlurPath)" />
     
     <Target Name="BlurProcessing" AfterTargets="AfterCompile"
-            Inputs="@(IntermediateAssembly)" Outputs="$(BlurTargetPath)">       
+            Inputs="@(IntermediateAssembly->'%(FullPath)')" Outputs="$(BlurTargetPath)">       
         <Blur.Processing.BlurTask TargetAssembly="@(IntermediateAssembly)"
                                   TargetPath="$(BlurTargetPath)"
                                   TargetReferences="@(ReferencePath)"

@@ -125,182 +125,145 @@ namespace Blur
 
         private void InsertDelegate(object[] arguments, MethodBody body, bool inlined)
         {
-            // When we insert a delegate, the first n parameters have to be replaced
-            // with the objects in arguments. Also, all ldarg.* calls must be replaced.
-            int argLength  = arguments.Length,
-                bodyLength = body.Instructions.Count,
-                initialPos = position,
-                initialOffset      = CurrentOffset,
-                initialParamsCount = parameters.Count,
-                initialVarsCount   = variables.Count;
-
             var bodyReturnType = body.Method.ReturnType;
-            if (bodyReturnType.DeclaringType?.FullName == "Blur.Context")
-                bodyReturnType = ((GenericInstanceType)bodyReturnType).GenericArguments[0];
-            var returnsVoid    = bodyReturnType.FullName == "System.Void";
-
-            if (!returnsVoid && bodyReturnType != Method.ReturnType)
-                throw new InvalidOperationException("Invalid return type.");
-
-            var bodyInstructions = body.Instructions;
-            var bodyParameters   = body.Method.Parameters;
-            var bodyVariables    = body.Variables;
-
-            bool toStatic = Method.IsStatic,
+            bool returnsVoid = bodyReturnType.Is(typeof(void), false),
+                 toStatic = Method.IsStatic,
                  checkArg = toStatic != body.Method.IsStatic;
 
-            // Import variables and parameters
-            for (int i = argLength; i < bodyParameters.Count; i++)
+            int argLength = arguments.Length;
+
+            Copy(body, Method.Body, position, ins =>
             {
-                ParameterDefinition parameter = bodyParameters[i];
-
-                if (parameter.ParameterType.DeclaringType?.FullName == "Blur.Context")
-                    parameter.ParameterType = ((GenericInstanceType)parameter.ParameterType).GenericArguments[0];
-
-                parameters.Add(bodyParameters[i]);
-            }
-            for (int i = 0; i < bodyVariables.Count; i++)
-            {
-                VariableDefinition variable = bodyVariables[i];
-
-                if (variable.VariableType.DeclaringType?.FullName == "Blur.Context")
-                    variable.VariableType = ((GenericInstanceType)variable.VariableType).GenericArguments[0];
-
-                variables.Add(bodyVariables[i]);
-            }
-
-            // Copy the body of the method simply, optionally fixing accesses to variables.
-            for (int i = 0; i < bodyLength; i++)
-            {
-                Instruction ins = bodyInstructions[i].Clone();
-
-                // If we're getting the Value field of a Context object, Nop' it.
-                // If we're calling op_Implicit, Nop' it as well.
-                if (ins.OpCode.Code == Code.Ldfld)
+                switch (ins.OpCode.Code)
                 {
-                    FieldReference target = (FieldReference)ins.Operand;
+                    case Code.Ldfld:
+                    {
+                        // Maybe it gets a Context field?
+                        FieldReference target = (FieldReference)ins.Operand;
 
-                    if (target.DeclaringType?.DeclaringType?.FullName == "Blur.Context")
-                        ins = Instruction.Create(OpCodes.Nop);
-                }
-                else if (ins.OpCode.Code == Code.Call)
-                {
-                    MethodReference target = (MethodReference)ins.Operand;
+                        if (target.DeclaringType?.DeclaringType?.FullName == "Blur.Context")
+                            return new[] { Instruction.Create(OpCodes.Nop) };
 
-                    if (target.DeclaringType?.DeclaringType?.FullName == "Blur.Context")
-                        ins = Instruction.Create(OpCodes.Nop);
+                        break;
+                    }
+
+                    case Code.Call:
+                    {
+                        // Maybe it calls Context.smth?
+                        MethodReference target = (MethodReference)ins.Operand;
+
+                        if (target.DeclaringType?.DeclaringType?.FullName == "Blur.Context")
+                            return new[] { Instruction.Create(OpCodes.Nop) };
+
+                        break;
+                    }
                 }
 
-                // Fix the instruction if it accesses a variable
-                int accessIndex = LocToInteger(ins);
-
-                if (accessIndex != -1)
-                {
-                    // Access to a variable
-                    if (ins.OpCode.StackBehaviourPop == StackBehaviour.Pop1)
-                        FixStlocFor(accessIndex + initialVarsCount, ins);
-                    else
-                        FixLdlocFor(accessIndex + initialVarsCount, ins);
-                }
-
-                if (position != 0)
-                {
-                    ins.Previous = instructions[position - 1];
-                    ins.FixOffset();
-                }
-
-                instructions.Insert(position++, ins);
-            }
-
-            // If it's inlined, we don't want a ret call at the end of it.
-            if (inlined)
-            {
-                Instruction last = instructions[position - 1];
-                if (last.OpCode.Code == Code.Ret)
-                    last.OpCode = returnsVoid ? OpCodes.Nop : OpCodes.Pop;
-            }
-
-            // Fix branches within the copied instructions.
-            for (int i = initialPos; i < position; i++)
-            {
-                object operand = instructions[i].Operand;
-
-                if (operand is Instruction)
-                {
-                    Instruction ins = (Instruction)operand;
-
-                    instructions[i].Operand = instructions[bodyInstructions.IndexOf(ins) + initialPos];
-                }
-                else if (operand is Instruction[])
-                {
-                    Instruction[] inss = (Instruction[])operand;
-
-                    for (int o = 0; o < inss.Length; o++)
-                        inss[o] = instructions.First(x => x.Offset >= inss[o].Offset + initialOffset);
-                }
-            }
-
-            // Fix accesses to Context and arguments.
-            for (int i = initialPos; i < position; i++)
-            {
-                Instruction ins = instructions[i];
                 int argIndex = LdargToInteger(ins);
 
                 if (argIndex != -1)
                 {
+                    // Accessing an argument.
+                    // In case it's a new one, inject it.
                     if (checkArg)
                         argIndex--;
 
-                    // Access to an argument
                     if (argIndex <= argLength)
                     {
                         // Access to an argument from the outside
-                        object arg = arguments[argIndex];
+                        var arg = arguments[argIndex] as Context.Any;
 
-                        if (arg is Context.IContextObj)
-                        {
-                            // Context call, change it
-                            var ctx = (Context.IContextObj)arguments[argIndex];
-
-                            Instruction replacement = ctx.GetInstruction(this);
-
-                            ins.OpCode  = replacement.OpCode;
-                            ins.Operand = replacement.Operand;
-
-                            continue;
-                        }
-
-                        Instruction[] newInstructions = InstructionsFor(arg);
-
-                        if (newInstructions.Length == 2)
-                            instructions.Insert(i + 1, newInstructions[1]);
-                        instructions[i] = newInstructions[0];
-                    }
-                    else
-                    {
-                        // Access to an actual parameter
-                        FixLdargFor(parameters[argIndex - argLength + initialParamsCount], ins);
+                        if (arg != null)
+                            return arg.GetInstructions(this);
                     }
                 }
 
-                ins.FixOffset();
+                return null;
+            });
+
+            //// When we insert a delegate, the first n parameters have to be replaced
+            //// with the objects in arguments. Also, all ldarg.* calls must be replaced.
+            //int argLength  = arguments.Length,
+            //    bodyLength = body.Instructions.Count,
+            //    initialPos = position,
+            //    initialOffset      = CurrentOffset,
+            //    initialParamsCount = parameters.Count,
+            //    initialVarsCount   = variables.Count;
+
+            //if (bodyReturnType.DeclaringType?.FullName == "Blur.Context")
+            //    bodyReturnType = ((GenericInstanceType)bodyReturnType).GenericArguments[0];
+
+            //if (!returnsVoid && bodyReturnType != Method.ReturnType)
+            //    throw new InvalidOperationException("Invalid return type.");
+
+            //var bodyInstructions = body.Instructions;
+            //var bodyParameters   = body.Method.Parameters;
+            //var bodyVariables    = body.Variables;
+
+            // If it's inlined, we don't want a ret call at the end of it.
+            if (inlined)
+            {
+                Instruction last = instructions[position + body.Instructions.Count - 1];
+
+                if (last.OpCode.Code == Code.Ret)
+                    last.OpCode = returnsVoid ? OpCodes.Nop : OpCodes.Pop;
             }
+
+            //// Fix accesses to Context and arguments.
+            //for (int i = initialPos; i < position; i++)
+            //{
+            //    Instruction ins = instructions[i];
+            //    int argIndex = LdargToInteger(ins);
+
+            //    if (argIndex != -1)
+            //    {
+            //        if (checkArg)
+            //            argIndex--;
+
+            //        // Access to an argument
+            //        if (argIndex <= argLength)
+            //        {
+            //            // Access to an argument from the outside
+            //            object arg = arguments[argIndex];
+
+            //            if (arg is Context.IContextObj)
+            //            {
+            //                // Context call, change it
+            //                var ctx = (Context.IContextObj)arguments[argIndex];
+
+            //                Instruction replacement = ctx.GetInstruction(this);
+
+            //                ins.OpCode  = replacement.OpCode;
+            //                ins.Operand = replacement.Operand;
+
+            //                continue;
+            //            }
+
+            //            Instruction[] newInstructions = InstructionsForConstant(arg);
+
+            //            if (newInstructions.Length == 2)
+            //                instructions.Insert(i + 1, newInstructions[1]);
+            //            instructions[i] = newInstructions[0];
+            //        }
+            //        else
+            //        {
+            //            // Access to an actual parameter
+            //            FixLdargFor(parameters[argIndex - argLength + initialParamsCount], ins);
+            //        }
+            //    }
+
+            //    ins.FixOffset();
+            //}
         }
 
         private ILWriter Delegate(object[] arguments, Delegate del)
         {
-            for (int i = 0; i < arguments.Length; i++)
-            {
-                object arg = arguments[i];
-
-                if (arg != null && !IsConstant(arg.GetType()) && !(arg is Context.IContextObj))
-                    throw new ArgumentException("The given argument must be constant.", ((char)(97 + i)).ToString());
-            }
-
             MethodInfo info = del.GetMethodInfo();
             MethodBody body = info.GetDefinition().Body;
 
-            this.InsertDelegate(arguments, body, del.GetType().Name.Contains("Action"));
+            Processor.MarkForDeletion(body.Method);
+
+            this.InsertDelegate(arguments, body, info.ReturnType == typeof(void));
             return this;
         }
     }

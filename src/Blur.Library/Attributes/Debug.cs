@@ -22,7 +22,7 @@ namespace Blur
 
             // Start the debugger.
             method.Write().ToStart()
-                  .Delegate(() =>
+                  .Action(() =>
                   {
                       if (Debugger.IsAttached)
                           Debugger.Break();

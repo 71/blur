@@ -8,53 +8,55 @@ namespace Blur
         /// <summary>
         /// Emits the IL code of the given <paramref name="action"/> to the writer.
         /// </summary>
-        public ILWriter Delegate(System.Action action) => this.Delegate(new object[0], action);
+        public ILWriter Action(System.Action action) => this.Delegate(new object[0], action);
 
         /// <summary>
         /// Emits the IL code of the given <paramref name="func"/> to the writer.
         /// </summary>
-        public ILWriter Delegate<TReturn>(System.Func<TReturn> func) => this.Delegate(new object[0], func);
+        public ILWriter Function<TReturn>(System.Func<TReturn> func) => this.Delegate(new object[0], func);
 
 
         <#
-        string genArgs    = "";
-        string delGenArgs = "";
-        string parameters = "";
-        string arguments  = "";
+        string genArgs       = "";
+        string delGenArgs    = "";
+        string parameters    = "";
+        string arguments     = "";
+        string delParameters = "";
 
         for (int i = 0; i < 26; i++)
         {
             string prefix = i == 0 ? "" : ", ";
 
-            genArgs     += prefix + 'T' + (char)(65 + i);
-            parameters  += prefix + 'T' + (char)(65 + i) + ' ' + (char)(97 + i);
+            genArgs       += prefix + 'T' + (char)(65 + i);
+            parameters    += prefix + "Context.Any<T" + (char)(65 + i) + "> " + (char)(97 + i);
+            delParameters += prefix + 'T' + (char)(65 + i) + ' ' + (char)(97 + i);
 
-            delGenArgs  += prefix + "in T" + (char)(65 + i);
-            arguments   += prefix + (char)(97 + i);
+            delGenArgs    += prefix + "in T" + (char)(65 + i);
+            arguments     += prefix + (char)(97 + i);
         #>
 
         #region <#=genArgs#>
         /// <summary>
-        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Delegate{<#=genArgs#>}"/>.
+        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Action{<#=genArgs#>}"/>.
         /// </summary>
-        public delegate void ILAction<<#=delGenArgs#>>(<#=parameters#>);
+        public delegate void ILAction<<#=delGenArgs#>>(<#=delParameters#>);
 
         /// <summary>
-        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Delegate{<#=genArgs#>, TReturn}"/>.
+        /// Represents a <see langword="delegate"/> that can be printed to IL, using <see cref="Function{<#=genArgs#>, TReturn}"/>.
         /// </summary>
-        public delegate TReturn ILFunc<<#=delGenArgs#>, out TReturn>(<#=parameters#>);
+        public delegate TReturn ILFunc<<#=delGenArgs#>, out TReturn>(<#=delParameters#>);
 
         /// <summary>
         /// Emits the IL code of the given <paramref name="action"/> to the writer, passing
         /// it the given arguments.
         /// </summary>
-        public ILWriter Delegate<<#=genArgs#>>(<#=parameters#>, ILAction<<#=genArgs#>> action) => this.Delegate(new object[] { <#=arguments#> }, action);
+        public ILWriter Action<<#=genArgs#>>(<#=parameters#>, ILAction<<#=genArgs#>> action) => this.Delegate(new object[] { <#=arguments#> }, action);
 
         /// <summary>
         /// Emits the IL code of the given <paramref name="func"/> to the writer, passing
         /// it the given arguments.
         /// </summary>
-        public ILWriter Delegate<<#=genArgs#>, TReturn>(<#=parameters#>, ILFunc<<#=genArgs#>, TReturn> func) => this.Delegate(new object[] { <#=arguments#> }, func);
+        public ILWriter Function<<#=genArgs#>, TReturn>(<#=parameters#>, ILFunc<<#=genArgs#>, TReturn> func) => this.Delegate(new object[] { <#=arguments#> }, func);
         #endregion
 
         <#

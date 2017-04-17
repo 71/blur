@@ -300,7 +300,7 @@ namespace Blur
         /// </summary>
         public ILWriter Constant(object arg)
         {
-            return this.Emit(InstructionsFor(arg));
+            return this.Emit(InstructionsForConstant(arg));
         }
 
         /// <summary>

@@ -20,7 +20,6 @@ namespace Blur
             shouldCleanUp = Processor.Settings.CleanUp;
         }
 
-
         #region Utils
         /// <summary>
         /// Visits all the given <paramref name="attributes"/>.

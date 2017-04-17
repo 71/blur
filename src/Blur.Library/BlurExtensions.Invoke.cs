@@ -2,7 +2,6 @@
 using System.Reflection;
 using Mono.Cecil;
 using System.Reflection.Emit;
-using SR = System.Reflection;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 

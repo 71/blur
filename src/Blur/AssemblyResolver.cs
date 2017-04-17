@@ -91,6 +91,10 @@ namespace Blur.Processing
         {
             Assembly assembly;
 
+            // Try loaded assemblies
+            //if (an.Name == "Blur.Library")
+            //    return Processor.BlurLibrary;
+
 #if NET_CORE
             assembly = ResolveNetCore(an);
             if (assembly != null)
@@ -241,35 +245,32 @@ namespace Blur.Processing
         /// </summary>
         private static Assembly ResolveNugetCache(AssemblyName an)
         {
-            // Try the following path: %USERPROFILE%\.nuget\packages\[name]\[version]\lib
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".nuget", "packages",
-                an.Name, an.Version.ToString(),
-                "lib"
-            );
-
-            if (!Directory.Exists(path)) // If it's a pre-release, we mighta missed something.
-            {
-                path = Path.Combine(
+            return ResolveNugetCache(Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? "", an)
+                ?? ResolveNugetCache(Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".nuget", "packages", an.Name
-                );
+                    ".nuget", "packages"), an)
+                ?? ResolveNugetCache(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".nuget", "packages"), an
+            );
+        }
 
-                if (!Directory.Exists(path))
-                    return null;
+        /// <summary>
+        /// Attempts to resolve an assembly in the NuGet cache.
+        /// </summary>
+        private static Assembly ResolveNugetCache(string nugetCache, AssemblyName an)
+        {
+            // Try the following path: %USERPROFILE%\.nuget\packages\[name]\[version]\lib
+            string path = Path.Combine(nugetCache, an.Name);
 
-                string vString = $"{an.Version.Major}.{an.Version.Minor}.{an.Version.Build}";
-                path = Directory.EnumerateDirectories(path, vString + '*').LastOrDefault();
+            if (!Directory.Exists(path))
+                return null;
 
-                if (path == null)
-                    return null;
+            string vString = $"{an.Version.Major}.{an.Version.Minor}";
+            path = Directory.EnumerateDirectories(path, vString + '*').LastOrDefault();
 
-                path = Path.Combine(path, "lib");
-
-                if (!Directory.Exists(path))
-                    return null;
-            }
+            if (path == null)
+                return null;
 
             // Check if the file is at the root
             string file = Path.Combine(path, an.Name + ".dll");
@@ -325,9 +326,7 @@ namespace Blur.Processing
                 {
                     m = Regex.Match(directory, @"(?<=netstandard)(\d+)\.(\d+)");
                     
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    if (m.Success && false) // TODO: Replace this by a .NET Core check on current assembly.
-                        // ReSharper disable once HeuristicUnreachableCode
+                    if (m.Success) // TODO: Replace this by a .NET Core check on current assembly.
                         file = directory;
                 }
             }

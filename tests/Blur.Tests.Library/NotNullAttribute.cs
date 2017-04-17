@@ -1,5 +1,4 @@
 ﻿using System;
-using Blur.Extensions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -34,7 +33,7 @@ namespace Blur.Tests.Library
                 if (ins.OpCode == OpCodes.Ret)
                 {
                     // Check if we're returning null during compilation.
-                    if (ins?.Previous.OpCode.Code == Code.Ldnull)
+                    if (ins.Previous.OpCode.Code == Code.Ldnull)
                         throw new Exception("Cannot return null from a [NotNull] method.");
                     
                     // Add runtime check.
