@@ -2,6 +2,9 @@
 Blur uses [Mono.Cecil](https://github.com/jbevain/cecil) to weave assemblies from the inside.
 To make this easier, Blur provides fluent APIs for IL generation and `MethodDefinition` invocation.
 
+## Warning
+Blur has been deprecated in favor of [Cometary](https://github.com/6A/Cometary), and more specifically its [IL](https://github.com/6A/Cometary/samples/Cometary.IL) sample.
+
 ## Five-minutes annotated guide
 ```csharp
 using System;
